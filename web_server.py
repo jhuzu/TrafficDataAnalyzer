@@ -25,8 +25,6 @@ MAX_SESSIONS = 10
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
 DEFAULT_TEMPLATE_PATHS = (
     ROOT / "板橋分局交通事故分析週報_骨架自動填值模板.pptx",
-    Path("/Users/jhu/Downloads/板橋分局交通事故分析週報模板.pptx"),
-    ROOT / "板橋分局交通事故分析週報模板.pptx",
 )
 
 
@@ -321,8 +319,7 @@ class Handler(BaseHTTPRequestHandler):
                 template = next((candidate for candidate in DEFAULT_TEMPLATE_PATHS if candidate.is_file()), None)
                 if template is None:
                     raise ValueError(
-                        "找不到週報模板。請將「板橋分局交通事故分析週報模板.pptx」放在 Downloads，"
-                        "或放在 PivotCacheExtractor 資料夾。"
+                        "找不到週報模板。請確認專案內存在「板橋分局交通事故分析週報_骨架自動填值模板.pptx」。"
                     )
                 node = shutil.which("node") or "/opt/homebrew/bin/node"
                 if not Path(node).is_file():
