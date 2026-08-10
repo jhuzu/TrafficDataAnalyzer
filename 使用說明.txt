@@ -3,26 +3,26 @@ Pivot Cache 完整分析工具
 網頁版使用方式
 1. 連按兩下「啟動網頁版.command」。
 2. 瀏覽器會開啟 http://127.0.0.1:8765。
-3. 選取 .xlsm 檔案並按「載入資料」。
-4. 載入後使用左側「基礎分析」入口；或選「投影片生成」套用週報模板。
+3. 選取 .xlsm 檔案並按「載入檔案」。
+4. 載入後使用「事故資料分析」入口；投影片生成位於同一頁的 tablist。
 5. 基礎分析保留下拉式分析項目，可選路段、路口、時段、肇因、年齡或車種；顯示筆數、事故樣態與趨勢週期也由原本控制項設定。上方按鈕只切換統計表格、統計圖表、熱點圖、趨勢圖與摘要區塊。
 6. 前端檔案已拆分為 `frontend/index.html`、`frontend/styles.css`、`frontend/app.js`；Python 僅負責資料解析、API 與靜態檔案服務。
 7. 摘要可按「複製摘要」貼到報告中。
 
 投影片生成
-1. 將「板橋分局交通事故分析週報模板.pptx」放在 `/Users/jhu/Downloads/`，或放在本資料夾。
+1. 系統固定使用 `modules/accident_analysis/templates/板橋分局交通事故分析週報_骨架自動填值模板.pptx`。
 2. 啟動網頁並載入 `.xlsm`。
 3. 左側選「投影片生成」，確認統計期間後按「生成並下載 PPTX」。
 4. 系統會沿用原模板版面，填入件數、A1/A2 KPI、路段、路口、時段、肇因、年齡、車種及 A1 明細。
 5. 地圖框位先保留模板預留圖框，後續可替換離線圖資。
 
 使用方式
-1. 將 PivotCacheExtractor.command、extract_pivot_cache.py、build_xlsx.mjs 放在同一個資料夾。
-2. 連按兩下 PivotCacheExtractor.command。
+1. 將 `TrafficDataAnalyzer.command`、`extract_pivot_cache.py`、`build_xlsx.mjs` 放在同一個專案中。
+2. 連按兩下 `TrafficDataAnalyzer.command`。
 3. 在跳出的視窗選取含樞紐分析表的 .xlsm 檔。
 4. 工具完成後，會在原檔同一個資料夾產生「原檔名_完整自動分析.xlsx」。
 
-也可以直接把 .xlsm 檔拖曳到 PivotCacheExtractor.command 上。
+也可以直接把 .xlsm 檔拖曳到 `TrafficDataAnalyzer.command` 上。
 
 網頁版限制
 - 來源檔必須保留 Pivot Cache；若無法還原，工具會顯示訊息。

@@ -8,13 +8,22 @@ TrafficDataAnalyzer/
 │   ├── modules.js          # 頂層資料分析模組註冊表
 │   ├── app.js              # 前端狀態、事件與分析畫面
 │   └── lib/                # Leaflet 與地圖套件
-├── web_server.py           # localhost API、session、資料分析與 PPTX 呼叫
+├── web_server.py           # localhost API、session 與模組路由
 ├── extract_pivot_cache.py  # 從 xlsm 還原 Pivot Cache 資料
-├── presentation_generator.mjs
-│                           # 套用模板、填值、重繪第五頁時段圖表
-├── build_*.mjs             # Excel/PPT 模板建置工具
-├── *.pptx                  # 正式模板資產
-├── *.txt                   # 使用說明與欄位對照
+├── build_xlsx.mjs          # 共用 Excel 輸出工具，保留 xls/xlsm 流程
+├── modules/
+│   ├── accident_analysis/
+│   │   ├── presentation/
+│   │   │   ├── presentation_generator.mjs
+│   │   │   ├── build_skeleton_autofill_template.mjs
+│   │   │   └── build_clean_template.mjs
+│   │   ├── templates/
+│   │   │   ├── 板橋分局交通事故分析週報_骨架自動填值模板.pptx
+│   │   │   └── 板橋分局骨架模板_自動填值欄位對照.txt
+│   │   └── README.md
+│   └── major_violation/
+│       └── README.md
+├── *.txt                   # 共用使用說明
 ├── generated/              # 本機生成檔，不提交 Git
 └── tmp/                    # 暫存資料，不提交 Git
 ```
@@ -26,7 +35,7 @@ TrafficDataAnalyzer/
                                       └→ 投影片輸出模組
 ```
 
-目前先完成最小可維護版本：sidebar 使用模組註冊表，事故分析仍集中在既有 `app.js` / `web_server.py`。下一階段可將每個分析項目拆成 `frontend/features/accident/`，後端則拆成 `analysis/`、`api/`、`presentation/`。
+目前先完成低風險模組化：sidebar 使用模組註冊表，事故專用 PPT 工具與模板已移入 `modules/accident_analysis/`，`build_xlsx.mjs` 與 Pivot Cache 讀取保留為共用工具。事故基礎分析仍集中在既有 `app.js` / `web_server.py`，下一階段再拆成各模組自己的 `analysis/`、`api/` 與 `presentation/`。
 
 ## Git 維護建議
 

@@ -19,12 +19,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 FRONTEND_ROOT = ROOT / "frontend"
+ACCIDENT_MODULE_ROOT = ROOT / "modules" / "accident_analysis"
+ACCIDENT_PRESENTATION_ROOT = ACCIDENT_MODULE_ROOT / "presentation"
+ACCIDENT_TEMPLATE_ROOT = ACCIDENT_MODULE_ROOT / "templates"
 SESSIONS = {}
 SESSION_TTL = 1800  # 30 minutes
 MAX_SESSIONS = 10
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
 DEFAULT_TEMPLATE_PATHS = (
-    ROOT / "板橋分局交通事故分析週報_骨架自動填值模板.pptx",
+    ACCIDENT_TEMPLATE_ROOT / "板橋分局交通事故分析週報_骨架自動填值模板.pptx",
 )
 
 
@@ -331,7 +334,7 @@ class Handler(BaseHTTPRequestHandler):
                     data_path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
                     period = str(body.get("period", "115年1月1日至8月31日")).strip() or "115年1月1日至8月31日"
                     run = subprocess.run(
-                        [node, str(ROOT / "presentation_generator.mjs"), "--data", str(data_path),
+                        [node, str(ACCIDENT_PRESENTATION_ROOT / "presentation_generator.mjs"), "--data", str(data_path),
                          "--template", str(template), "--output", str(output_path), "--period", period],
                         capture_output=True,
                         text=True,

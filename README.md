@@ -26,7 +26,7 @@ python3 web_server.py
 
 頂層 sidebar 不直接寫死功能，改由 `frontend/modules.js` 的模組註冊表產生。未來新增「人口資料分析」或其他資料模組時，只需新增模組設定與對應 view，再逐步抽離該模組的分析邏輯。
 
-詳細說明請見 [ARCHITECTURE.md](ARCHITECTURE.md)。
+詳細說明請見 [ARCHITECTURE.md](ARCHITECTURE.md)。事故專用工具與模板位於 `modules/accident_analysis/`；未來的重大違規資料整理預留於 `modules/major_violation/`。
 
 ## 注意事項
 

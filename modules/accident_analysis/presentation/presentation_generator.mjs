@@ -223,7 +223,7 @@ setText(8, "TextBox 29", `A1路段重點執法：針對${roads[0]?.label || "首
 setText(8, "TextBox 30", `嘉獎核予標準：專案期間每執行超速取締勤務達${Math.max(1, Math.round((total || 0) / 200))}小時，且總取締件數不低於${Math.max(1, Math.round((total || 0) / 20))}件者，核予嘉獎一次。`);
 
 for (const slide of copies) {
-  slide.speakerNotes.textFrame.setText(`[Sources]\n- Data: loaded Excel Pivot Cache session (件數欄加總)\n- Template: 板橋分局交通事故分析週報模板.pptx\n[/Sources]`);
+  slide.speakerNotes.textFrame.setText(`[Sources]\n- Data: loaded Excel Pivot Cache session (件數欄加總)\n- Template: 事故分析模組骨架模板\n[/Sources]`);
   slide.speakerNotes.setVisible(true);
 }
 
