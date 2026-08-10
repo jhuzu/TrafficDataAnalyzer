@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>交通事故分析工具</title>
+  <link rel="stylesheet" href="/lib/leaflet.css">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">交通組資料分析工具</div>
+      <nav id="moduleNav" class="nav" aria-label="主要功能"></nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar"><button id="menuButton" class="menu-button">☰</button><strong>交通事故分析工具</strong><span>本機
+          localhost｜資料不會上傳</span></header>
+      <section class="card load-card">
+        <h1>載入資料</h1>
+        <label class="file-picker">上傳.xlsm 檔案 <input id="fileInput" type="file" accept=".xlsm"></label>
+        <div class="actions"><button id="loadButton">載入檔案</button><button id="clearButton" class="secondary">清除資料</button><span id="status" class="status"></span></div>
+      </section>
+
+      <section id="basicView" class="view">
+        <div class="card">
+          <h2>基礎分析</h2>
+          <div class="controls">
+            <label>常見事故樣態<select id="pattern">
+                <option value="all">全部資料</option>
+                <option value="alcohol">酒駕相關</option>
+                <option value="drug">毒駕相關</option>
+                <option value="pedestrian">行人相關</option>
+              </select></label>
+            <label class="metric-selector">分析項目<select id="basicMetric">
+                <option value="road">易肇事路段</option>
+                <option value="intersection">易肇事路口</option>
+                <option value="time">易肇事時段</option>
+                <option value="cause">易肇事肇因</option>
+                <option value="age">易肇事年齡</option>
+                <option value="vehicle">易肇事車種</option>
+              </select></label>
+            <label>趨勢週期<select id="period">
+                <option value="week">按週</option>
+                <option value="month" selected>按月</option>
+                <option value="quarter">按季</option>
+              </select></label>
+            <label>顯示筆數<select id="top">
+                <option>10</option>
+                <option selected>20</option>
+                <option>50</option>
+                <option>100</option>
+              </select></label>
+          </div>
+          <div class="actions"><button id="analyzeButton">顯示分析</button></div>
+        </div>
+
+
+        <div id="metrics" class="metrics"></div>
+        <div id="analysisTabs" class="analysis-tabs" role="tablist"><button class="analysis-tab active"
+            data-analysis="table">統計表格</button><button class="analysis-tab" data-analysis="chart">統計圖表</button><button
+            class="analysis-tab" data-analysis="map">熱點圖</button><button class="analysis-tab"
+            data-analysis="trend">趨勢圖</button><button class="analysis-tab" data-analysis="summary">摘要</button><button
+            class="analysis-tab" data-analysis="slides">投影片生成</button></div>
+        <section id="panel-table" class="analysis-panel card">
+          <h2 id="analysisTitle">統計表格</h2>
+          <div id="analysisTable" class="table-wrap"></div>
+        </section>
+        <section id="panel-chart" class="analysis-panel card hidden">
+          <h2 id="chartTitle">統計圖表</h2>
+          <div class="large-chart"><canvas id="analysisChart" height="520"></canvas></div>
+        </section>
+        <section id="panel-trend" class="analysis-panel card hidden">
+          <h2>趨勢分析</h2>
+          <div id="trendTable" class="table-wrap"></div>
+        </section>
+        <section id="panel-map" class="analysis-panel card hidden">
+          <h2>事故熱點地圖</h2>
+          <div class="map-controls"><label><input type="radio" name="mapLayer" value="heat" checked>
+              熱力圖</label><label><input type="radio" name="mapLayer" value="markers"> 標記點</label><label><input
+                type="radio" name="mapLayer" value="both"> 兩者皆顯示</label><span id="mapInfo" class="muted"></span></div>
+          <div id="accidentMap" class="map-container"></div>
+        </section>
+        <section id="panel-summary" class="analysis-panel card hidden">
+          <h2>固定式摘要</h2>
+          <p id="narrative" class="narrative"></p><button id="copyButton" class="secondary">複製摘要</button>
+        </section>
+        <section id="panel-slides" class="analysis-panel card hidden">
+          <h2>生成交通事故分析週報</h2>
+          <p class="muted">請先載入 .xlsm；系統會使用固定的「板橋分局交通事故分析週報模板.pptx」填入目前分析資料。</p>
+          <div class="controls slide-controls">
+            <label>統計期間(！這邊沒有篩選功能！)<input id="slidePeriod" value="115年1月1日至8月31日"></label>
+          </div>
+          <div class="actions"><button id="generateSlidesButton">生成並下載 PPTX</button><span id="slideStatus"
+              class="status"></span></div>
+          <div class="slide-outline">
+            <h3>週報架構</h3>
+            <p>封面 → 總體分析 → 易肇事路段 → 易肇事路口 → 時段與肇因 → 年齡與車種 → A1 明細 → 大執法策略</p>
+            <p class="muted">地圖框位沿用模板，之後可替換成離線圖資截圖。</p>
+          </div>
+        </section>
+      </section>
+
+    </main>
+  </div>
+  <script src="/lib/leaflet.js"></script>
+  <script src="/lib/leaflet-heat.js"></script>
+  <script src="/modules.js"></script>
+  <script src="/app.js"></script>
+</body>
+
+</html>

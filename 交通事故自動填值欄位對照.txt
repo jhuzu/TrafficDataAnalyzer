@@ -1,0 +1,16 @@
+交通事故自動填值乾淨模板欄位規則
+
+模板只替換 {{TOKEN}}，不要調整版面框位。
+
+總體：PERIOD、TOTAL、TD、A1、A1D、A2、A2D、SUMMARY
+路段：R1-R10（名稱）、N1-N10（件數）、RCOUNT（路段數）
+路口：I1-I10（名稱）、IN1-IN10（件數）
+時段：T1-T12（時段）、TN1-TN12（件數）、TP1-TP3（比例）
+肇因：C1-C12（肇因）、CN1-CN12（件數）、CP1-CP3（比例）
+年齡：AAG1-AAG7（年齡區間）、AN1-AN7（件數）、AP1-AP3（比例）
+車種：V1-V7（車種）、VN1-VN7（件數）、VP1-VP3（比例）
+A1明細：A1T/A1L/A1C/A1V/A1F/A1N（時間、地點、肇因、車種、死亡、備註）
+勤務：EPERIOD、HOTSPOT、FOCUS1、FOCUS2、AHOURS、ACOUNT、ALIMIT
+
+資料來源：目前載入的 Excel Pivot Cache，統計數字一律以「件數」欄加總。
+長文字由生成器先縮短，再填入固定框位；不直接把原始長字串塞入投影片。

@@ -1,0 +1,430 @@
+/* === Design Tokens === */
+:root {
+  --navy: #17324d;
+  --blue: #2166a5;
+  --pale: #e9f2fb;
+  --line: #cdd7e1;
+  --ink: #1d2939;
+  --muted: #667085;
+  --bg: #f4f6f8;
+}
+
+/* === Reset & Base === */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 10px;
+  color: var(--navy);
+}
+
+h1 {
+  font-size: 20px;
+}
+
+h2 {
+  font-size: 18px;
+}
+
+h3 {
+  font-size: 14px;
+}
+
+/* === App Shell === */
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 238px minmax(0, 1fr);
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  background: var(--navy);
+  color: #fff;
+  padding: 18px 14px;
+}
+
+.brand {
+  background: transparent;
+  color: #fdfdfd;
+  border-radius: 10px;
+  padding: 20px 10px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.nav {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.nav-button {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #9fb4c9;
+  border-radius: 5px;
+  padding: 13px 8px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.nav-button.active,
+.nav-button:hover {
+  background: #2d628f;
+  border-color: #fff;
+}
+
+.nav-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* --- Content Area --- */
+.content {
+  min-width: 0;
+  padding: 18px 24px 42px;
+}
+
+.topbar {
+  height: 56px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  margin-bottom: 14px;
+  color: var(--navy);
+}
+
+.topbar span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.menu-button {
+  display: none;
+  background: var(--navy);
+  color: #fff;
+  border: 0;
+  padding: 7px 10px;
+  border-radius: 4px;
+}
+
+/* === Cards & Sections === */
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+/* === Controls === */
+.controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.controls label {
+  display: grid;
+  gap: 4px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+select,
+input {
+  font: inherit;
+  border: 1px solid #aebbc8;
+  border-radius: 4px;
+  background: #fff;
+  padding: 8px;
+  color: var(--ink);
+}
+
+button {
+  font: inherit;
+  border: 0;
+  border-radius: 4px;
+  background: var(--blue);
+  color: #fff;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.secondary {
+  background: #667085;
+}
+
+/* === YouTube-like analysis tabs === */
+.analysis-tabs {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 0 12px;
+  margin: 10px 0 0;
+  scrollbar-width: thin
+}
+
+.analysis-tab {
+  flex: 0 0 auto;
+  border-radius: 18px;
+  background: #e8edf2;
+  color: var(--navy);
+  padding: 9px 16px;
+  font-weight: 700;
+  white-space: nowrap
+}
+
+.analysis-tab:hover,
+.analysis-tab.active {
+  background: var(--navy);
+  color: #fff
+}
+
+.analysis-panel {
+  min-height: 360px
+}
+
+.large-chart {
+  min-height: 560px;
+  padding: 8px 0
+}
+
+.large-chart canvas {
+  height: 520px;
+  min-height: 520px
+}
+
+/* === File Picker === */
+.file-picker {
+  display: block;
+  border: 1px dashed #9aaebe;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.file-picker input {
+  border: 0;
+  padding: 0;
+  margin-left: 8px;
+}
+
+/* === Actions & Status === */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.status {
+  color: var(--blue);
+  min-height: 20px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* === Metrics === */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.metric {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.metric small {
+  display: block;
+  color: var(--muted);
+}
+
+.metric strong {
+  font-size: 21px;
+  color: var(--navy);
+}
+
+/* === Two-Column Layout === */
+.two-column {
+  display: grid;
+  grid-template-columns: 1.35fr .65fr;
+  gap: 12px;
+}
+
+/* === Tables === */
+.table-wrap {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 7px;
+  border: 1px solid #d6dee7;
+  text-align: right;
+  white-space: nowrap;
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+th {
+  background: var(--pale);
+  color: var(--navy);
+}
+
+/* === Canvas Chart === */
+canvas {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid #e5e9ef;
+  background: #fff;
+}
+
+/* === Map Placeholder === */
+.map-placeholder {
+  min-height: 280px;
+  border: 1px dashed #aebbc8;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* === Narrative === */
+.narrative {
+  background: #fafbfc;
+  border-left: 4px solid var(--blue);
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.slide-outline {
+  min-height: 140px;
+}
+
+.slide-controls {
+  grid-template-columns: minmax(220px, 360px);
+}
+
+/* === Responsive === */
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: fixed;
+    z-index: 5;
+    left: -250px;
+    top: 0;
+    bottom: 0;
+    width: 238px;
+    transition: left .2s;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  .menu-button {
+    display: block;
+  }
+
+  .topbar span {
+    display: none;
+  }
+
+  .content {
+    padding: 12px;
+  }
+
+  .controls,
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filter-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* === Map === */
+.map-container {
+  height: 420px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: #e8ecf0;
+  z-index: 0;
+}
+
+.map-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.map-controls label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.map-controls .muted {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.marker-popup {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.marker-popup strong {
+  color: var(--navy);
+}
+
+.marker-popup .count {
+  color: var(--blue);
+  font-weight: 700;
+  font-size: 15px;
+}
