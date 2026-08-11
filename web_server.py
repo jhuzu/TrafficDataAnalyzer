@@ -376,7 +376,7 @@ class Handler(BaseHTTPRequestHandler):
                 finally:
                     shutil.rmtree(tempdir, ignore_errors=True)
 
-            if self.path == "/heatmap":
+            if self.path == "/map-points":
                 headers = data["headers"]
                 lat_field, lng_field = detect_coord_fields(headers)
                 if not lat_field or not lng_field:
@@ -391,8 +391,10 @@ class Handler(BaseHTTPRequestHandler):
                 cross_idx = headers.index("交叉路名") if "交叉路名" in headers else None
                 cause_idx = headers.index("肇事原因") if "肇事原因" in headers else None
                 p_body, filtered = filter_rows(data, body)
-                heat_points = []
                 markers = []
+                coordinate_count = 0
+                coordinate_lat_sum = 0.0
+                coordinate_lng_sum = 0.0
                 road_agg = defaultdict(lambda: {"count": 0, "lats": [], "lngs": []})
                 for row in filtered:
                     try:
@@ -402,7 +404,9 @@ class Handler(BaseHTTPRequestHandler):
                     if lat is None:
                         continue
                     w = number(row, count_idx) if count_idx is not None else 1
-                    heat_points.append([lat, lng, w])
+                    coordinate_count += 1
+                    coordinate_lat_sum += lat
+                    coordinate_lng_sum += lng
                     road = text(row, road_idx)
                     cross = text(row, cross_idx)
                     label = "／".join(x for x in (road, cross) if x) or "未知路段"
@@ -420,18 +424,17 @@ class Handler(BaseHTTPRequestHandler):
                         "count": int(info["count"]),
                         "label": label,
                     })
-                if heat_points:
+                if coordinate_count:
                     center = [
-                        sum(p[0] for p in heat_points) / len(heat_points),
-                        sum(p[1] for p in heat_points) / len(heat_points),
+                        coordinate_lat_sum / coordinate_count,
+                        coordinate_lng_sum / coordinate_count,
                     ]
                 else:
                     center = [25.0118, 121.4590]  # Banqiao default
                 return self.send_json(200, {
-                    "heatPoints": heat_points,
                     "markers": markers,
                     "center": center,
-                    "total": len(heat_points),
+                    "total": coordinate_count,
                     "coordField": f"{lng_field}/{lat_field}",
                 })
 

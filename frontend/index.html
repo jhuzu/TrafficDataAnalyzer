@@ -78,10 +78,8 @@
           <div id="trendTable" class="table-wrap"></div>
         </section>
         <section id="panel-map" class="analysis-panel card hidden">
-          <h2>事故熱點地圖</h2>
-          <div class="map-controls"><label><input type="radio" name="mapLayer" value="heat" checked>
-              熱力圖</label><label><input type="radio" name="mapLayer" value="markers"> 標記點</label><label><input
-                type="radio" name="mapLayer" value="both"> 兩者皆顯示</label><span id="mapInfo" class="muted"></span></div>
+          <h2>事故標記地圖</h2>
+          <div class="map-controls"><span id="mapInfo" class="muted"></span></div>
           <div id="accidentMap" class="map-container"></div>
         </section>
         <section id="panel-summary" class="analysis-panel card hidden">
@@ -110,7 +108,6 @@
     </main>
   </div>
   <script src="/lib/leaflet.js"></script>
-  <script src="/lib/leaflet-heat.js"></script>
   <script src="/modules.js"></script>
   <script src="/app.js"></script>
 </body>

@@ -167,7 +167,7 @@ function showAnalysisPanel(kind) {
   }
   if (panel === "map") {
     setTimeout(() => {
-      if (state.token) loadHeatmap();
+      if (state.token) loadMapMarkers();
       if (map) map.invalidateSize();
     }, 60);
   }
@@ -275,10 +275,6 @@ function clearData() {
   const canvas = $("analysisChart");
   if (canvas) canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
   if (map) {
-    if (heatLayer) {
-      map.removeLayer(heatLayer);
-      heatLayer = null;
-    }
     if (markerLayer) markerLayer.clearLayers();
   }
   showAnalysisPanel("table");
@@ -313,11 +309,10 @@ $("copyButton").onclick = () =>
     .then(() => setStatus("摘要已複製。"));
 
 // ---------------------------------------------------------------------------
-// Heatmap / Map
+// Marker map
 // ---------------------------------------------------------------------------
 
 let map = null;
-let heatLayer = null;
 let markerLayer = null;
 
 function initMap() {
@@ -338,32 +333,9 @@ function initMap() {
   }).addTo(map);
 
   markerLayer = L.layerGroup().addTo(map);
-
-  // Layer toggle
-  document.querySelectorAll('input[name="mapLayer"]').forEach((radio) => {
-    radio.onchange = () => updateMapLayers(radio.value);
-  });
 }
 
-function updateMapLayers(mode) {
-  if (!map) return;
-  if (heatLayer) {
-    if (mode === "heat" || mode === "both") {
-      map.addLayer(heatLayer);
-    } else {
-      map.removeLayer(heatLayer);
-    }
-  }
-  if (markerLayer) {
-    if (mode === "markers" || mode === "both") {
-      map.addLayer(markerLayer);
-    } else {
-      map.removeLayer(markerLayer);
-    }
-  }
-}
-
-async function loadHeatmap() {
+async function loadMapMarkers() {
   if (!state.token) return;
   const container = $("accidentMap");
   if (!container || container.clientWidth === 0 || container.clientHeight === 0) return;
@@ -375,7 +347,7 @@ async function loadHeatmap() {
       token: state.token,
       pattern: $("pattern").value,
     };
-    const response = await fetch("/heatmap", {
+    const response = await fetch("/map-points", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -389,34 +361,14 @@ async function loadHeatmap() {
     // Update info
     $("mapInfo").textContent = `${data.total.toLocaleString()} 筆座標（${data.coordField}）`;
 
-    // Clear existing layers
-    if (heatLayer) {
-      map.removeLayer(heatLayer);
-      heatLayer = null;
-    }
     markerLayer.clearLayers();
 
-    if (data.heatPoints.length === 0) {
+    if (data.markers.length === 0) {
       $("mapInfo").textContent = "沒有可用的座標資料";
       return;
     }
 
-    // Heat layer
-    heatLayer = L.heatLayer(data.heatPoints, {
-      radius: 22,
-      blur: 18,
-      maxZoom: 17,
-      max: Math.max(...data.heatPoints.map((p) => p[2])),
-      gradient: {
-        0.2: "#2166a5",
-        0.4: "#43a2ca",
-        0.6: "#fee08b",
-        0.8: "#f46d43",
-        1.0: "#d73027",
-      },
-    }).addTo(map);
-
-    // Marker layer — top aggregated intersections
+    // Top aggregated intersections and road segments.
     data.markers.forEach((m) => {
       const radius = Math.max(5, Math.min(18, Math.sqrt(m.count) * 2));
       L.circleMarker([m.lat, m.lng], {
@@ -433,23 +385,22 @@ async function loadHeatmap() {
         .addTo(markerLayer);
     });
 
-    // Fit map to data bounds
-    const bounds = L.latLngBounds(data.heatPoints.map((p) => [p[0], p[1]]));
-    map.fitBounds(bounds, { padding: [30, 30] });
-
-    // Apply current layer toggle
-    const activeRadio = document.querySelector('input[name="mapLayer"]:checked');
-    updateMapLayers(activeRadio ? activeRadio.value : "heat");
+    const bounds = L.latLngBounds(data.markers.map((point) => [point.lat, point.lng]));
+    if (data.markers.length === 1) {
+      map.setView([data.markers[0].lat, data.markers[0].lng], 16);
+    } else {
+      map.fitBounds(bounds, { padding: [30, 30] });
+    }
   } catch (error) {
     $("mapInfo").textContent = "地圖載入失敗：" + error.message;
   }
 }
 
-// Hook into the analysis flow — load heatmap when analysis completes
+// Refresh map markers when analysis conditions change.
 const _originalAnalyze = analyze;
 analyze = async function () {
   await _originalAnalyze();
-  await loadHeatmap();
+  await loadMapMarkers();
 };
 
 // Rebind controls after the map-enhanced analyze wrapper is installed.
