@@ -2,8 +2,11 @@
 
 此模組只放事故資料專用功能：
 
+- `data/transformer.py`：將共用 Excel reader 的輸出轉成事故專屬 `AccidentDataset`
+- `analysis/service.py`：事故樣態篩選、排行、趨勢、摘要、原始資料分頁及地圖標記
 - `presentation/`：事故週報 PPT 生成與骨架模板建置工具
 - `templates/`：事故週報骨架模板與 TOKEN 對照表
-- 基礎分析目前仍由 `frontend/app.js` 與 `web_server.py` 提供，後續可再拆到本模組的 `analysis/`。
+
+`web_server.py` 只負責 HTTP、session 與簡報程序呼叫；不得在路由內新增事故統計規則。新增事故分析項目時，應修改 `analysis/service.py` 並補上對應測試。
 
 新增事故分析欄位或投影片 TOKEN 時，請優先在此模組內修改，避免影響其他資料分析模組。

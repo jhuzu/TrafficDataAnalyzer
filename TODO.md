@@ -4,14 +4,18 @@
 
 - [x] 抽出 `core/excel/` 資料讀取入口與統一資料契約。
 - [x] 支援一般 `.xlsx/.xlsm` 工作表，並與 Pivot Cache 自動比較。
+- [x] 建立事故專屬 `data/transformer.py` 與不可變 `AccidentDataset`。
+- [x] 將事故篩選、排行、趨勢、摘要、原始資料及地圖標記拆到 `analysis/service.py`。
+- [x] 精簡 `web_server.py`，由事故 analysis service 回傳分析 API 結果。
 - [ ] 視部署環境決定是否加入舊版 `.xls` 轉檔器。
-- [ ] 將 `presentation_generator.mjs` 的資料統計拆到 `modules/accident_analysis/data/transformer.mjs`。
+- [ ] 建立事故簡報 `payload-builder.py`，移除兩支 generator 內重複的統計邏輯。
 - [ ] 將 PPTX 物件搜尋、文字填值、表格填值與輸出抽到共用 helper。
 - [ ] 建立事故分析專用的 `slide-builder.mjs` 與 `template-config.mjs`。
-- [ ] 拆分 `web_server.py`，將事故分析、篩選、趨勢及簡報呼叫移入模組服務。
+- [ ] 將投影片程序呼叫由 `web_server.py` 移到事故 presentation service。
 - [ ] 為 `major_violation` 建立與事故分析一致的模組介面。
 - [ ] 待兩套模板資料契約穩定後，再合併模板建構共用流程。
-- [ ] 補上 transformer 單元測試、TOKEN 完整性測試及 PPTX 版面回歸測試。
+- [x] 補上 transformer 與 analysis service 單元測試。
+- [ ] 補上 TOKEN 完整性測試及 PPTX 版面回歸測試。
 
 ## 簡報生成
 

@@ -1,0 +1,327 @@
+"""All statistical and map analysis rules for traffic-accident data."""
+
+from __future__ import annotations
+
+import math
+import re
+from collections import defaultdict
+from datetime import date
+from typing import Any, Callable, Iterable
+
+from ..data import AccidentDataset
+
+
+PATTERN_LABELS = {
+    "all": "全部資料",
+    "alcohol": "酒駕相關",
+    "drug": "毒駕相關",
+    "pedestrian": "行人相關",
+}
+
+
+def _clean_number(value: float) -> int | float:
+    return int(value) if value.is_integer() else round(value, 2)
+
+
+def _age_label(value: Any) -> str:
+    try:
+        return f"{int(float(value))}歲"
+    except (ValueError, TypeError):
+        return "年齡不詳"
+
+
+def _twd97_to_wgs84(x: float, y: float) -> tuple[float, float]:
+    a = 6378137.0
+    f = 1.0 / 298.257222101
+    lng0 = math.radians(121.0)
+    k0 = 0.9999
+    dx = 250000.0
+    b = a * (1 - f)
+    e2 = (a ** 2 - b ** 2) / a ** 2
+    e12 = (a ** 2 - b ** 2) / b ** 2
+    x -= dx
+    m_value = y / k0
+    mu = m_value / (a * (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256))
+    e1 = (1 - math.sqrt(1 - e2)) / (1 + math.sqrt(1 - e2))
+    j1 = 3 * e1 / 2 - 27 * e1 ** 3 / 32
+    j2 = 21 * e1 ** 2 / 16 - 55 * e1 ** 4 / 32
+    j3 = 151 * e1 ** 3 / 96
+    j4 = 1097 * e1 ** 4 / 512
+    fp = mu + j1 * math.sin(2 * mu) + j2 * math.sin(4 * mu) + j3 * math.sin(6 * mu) + j4 * math.sin(8 * mu)
+    c1 = e12 * math.cos(fp) ** 2
+    t1 = math.tan(fp) ** 2
+    r1 = a * (1 - e2) / (1 - e2 * math.sin(fp) ** 2) ** 1.5
+    n1 = a / math.sqrt(1 - e2 * math.sin(fp) ** 2)
+    d_value = x / (n1 * k0)
+    q1 = n1 * math.tan(fp) / r1
+    q2 = d_value ** 2 / 2
+    q3 = (5 + 3 * t1 + 10 * c1 - 4 * c1 ** 2 - 9 * e12) * d_value ** 4 / 24
+    q4 = (61 + 90 * t1 + 298 * c1 + 45 * t1 ** 2 - 3 * c1 ** 2 - 252 * e12) * d_value ** 6 / 720
+    lat = fp - q1 * (q2 - q3 + q4)
+    q5 = d_value
+    q6 = (1 + 2 * t1 + c1) * d_value ** 3 / 6
+    q7 = (5 - 2 * c1 + 28 * t1 - 3 * c1 ** 2 + 8 * e12 + 24 * t1 ** 2) * d_value ** 5 / 120
+    lng = lng0 + (q5 - q6 + q7) / math.cos(fp)
+    return math.degrees(lat), math.degrees(lng)
+
+
+def _parse_coordinate(raw_lat: Any, raw_lng: Any) -> tuple[float | None, float | None]:
+    lat_value, lng_value = float(raw_lat), float(raw_lng)
+    if lat_value == 0 or lng_value == 0:
+        return None, None
+    if lng_value > 100000 or lat_value > 100000:
+        return _twd97_to_wgs84(lng_value, lat_value)
+    return lat_value, lng_value
+
+
+class AccidentAnalysisService:
+    """Query and aggregate one immutable accident dataset."""
+
+    def __init__(self, dataset: AccidentDataset):
+        self.dataset = dataset
+
+    def _filter_rows(self, options: dict[str, Any]) -> list[tuple[Any, ...]]:
+        pattern = str(options.get("pattern", "all"))
+        custom = str(options.get("custom", "")).strip()
+        output = []
+        for row in self.dataset.rows:
+            cause = self.dataset.text(row, "肇事原因")
+            vehicle = self.dataset.text(row, "當事者區分")
+            drink = self.dataset.text(row, "飲酒情形")
+            drug = self.dataset.text(row, "施用毒品情形") + self.dataset.text(row, "唾液毒品檢測")
+            blob = " ".join((cause, vehicle, drink, drug))
+            matches = (
+                pattern == "all"
+                or (pattern == "alcohol" and ("酒" in blob or "飲酒" in blob))
+                or (pattern == "drug" and ("毒" in blob or "違禁物" in blob))
+                or (pattern == "pedestrian" and "行人" in blob)
+            )
+            if matches and (not custom or custom in blob):
+                output.append(row)
+        return output
+
+    def _aggregate(
+        self,
+        rows: Iterable[tuple[Any, ...]],
+        key: Callable[[tuple[Any, ...]], str],
+        top: int,
+    ) -> list[dict[str, Any]]:
+        totals: dict[str, float] = defaultdict(float)
+        for row in rows:
+            label = key(row)
+            if label:
+                totals[label] += self.dataset.number(row, "件數")
+        return [
+            {"value": label, "count": _clean_number(count)}
+            for label, count in sorted(totals.items(), key=lambda item: (-item[1], item[0]))[:top]
+        ]
+
+    def _aggregate_field(
+        self, rows: Iterable[tuple[Any, ...]], field: str, top: int
+    ) -> list[dict[str, Any]]:
+        if self.dataset.position(field) is None:
+            return []
+        return self._aggregate(rows, lambda row: self.dataset.text(row, field), top)
+
+    def _trend(
+        self, rows: Iterable[tuple[Any, ...]], period: str
+    ) -> list[dict[str, Any]]:
+        totals: dict[str, float] = defaultdict(float)
+        for row in rows:
+            try:
+                month = int(self.dataset.text(row, "發生月"))
+            except (ValueError, TypeError):
+                continue
+            if period == "week":
+                try:
+                    year = (
+                        int(self.dataset.text(row, "發生年")) + 1911
+                        if self.dataset.position("發生年") is not None
+                        else 2026
+                    )
+                    day = (
+                        int(self.dataset.text(row, "發生日"))
+                        if self.dataset.position("發生日") is not None
+                        else 1
+                    )
+                    key = f"{month:02d}月第{date(year, month, day).isocalendar().week}週"
+                except (ValueError, TypeError):
+                    continue
+            else:
+                key = f"{month:02d}月" if period == "month" else f"第{(month - 1) // 3 + 1}季"
+            totals[key] += self.dataset.number(row, "件數")
+        order = sorted(totals, key=lambda value: tuple(int(number) for number in re.findall(r"\d+", value)))
+        output = []
+        previous = None
+        for key in order:
+            value = _clean_number(totals[key])
+            delta = None if previous is None else value - previous
+            rate = None if previous in (None, 0) else (value - previous) / previous
+            output.append({"value": key, "count": value, "delta": delta, "rate": rate})
+            previous = value
+        return output
+
+    def analyze(self, options: dict[str, Any]) -> dict[str, Any]:
+        rows = self._filter_rows(options)
+        if self.dataset.position("件數") is None:
+            raise ValueError("來源資料沒有「件數」欄位。")
+        top = int(options.get("top", 20))
+        total = int(sum(self.dataset.number(row, "件數") for row in rows))
+        road = self._aggregate_field(rows, "路段", top)
+        intersection = self._aggregate(
+            rows,
+            lambda row: "／".join(
+                value
+                for value in (
+                    self.dataset.text(row, "路段"),
+                    self.dataset.text(row, "交叉路名"),
+                )
+                if value
+            ),
+            top,
+        ) if self.dataset.position("路段") is not None else []
+        time_data = self._aggregate(
+            rows,
+            lambda row: (
+                f"{self.dataset.text(row, '發生時間')[:2]}時"
+                if self.dataset.text(row, "發生時間")[:2].isdigit()
+                else "時間不詳"
+            ),
+            top,
+        ) if self.dataset.position("發生時間") is not None else []
+        age = self._aggregate(
+            rows,
+            lambda row: _age_label(row[self.dataset.position("年齡")]),
+            top,
+        ) if self.dataset.position("年齡") is not None else []
+        cause = self._aggregate_field(rows, "肇事原因", top)
+        vehicle = self._aggregate_field(rows, "當事者區分", top)
+        trend = self._trend(rows, str(options.get("period", "month")))
+        label = PATTERN_LABELS.get(options.get("pattern"), "自訂條件")
+
+        narrative = f"本轄目前資料{label}，依Excel「件數」欄加總計{total:,}件。"
+        if road:
+            narrative += f"易肇事路段以{road[0]['value']}計{road[0]['count']:,}件最多；"
+        if cause:
+            narrative += f"主要肇事原因為{cause[0]['value']}計{cause[0]['count']:,}件；"
+        if age:
+            narrative += f"年齡層以{age[0]['value']}計{age[0]['count']:,}件最多；"
+        if vehicle:
+            narrative += f"車種以{vehicle[0]['value']}計{vehicle[0]['count']:,}件為大宗。"
+
+        return {
+            "metrics": [
+                {"label": "符合條件件數", "value": total},
+                {"label": "路段類別數", "value": len(road)},
+                {"label": "肇因類別數", "value": len(cause)},
+                {"label": "資料列數", "value": len(rows)},
+            ],
+            "rule": f"目前篩選：{label}；統計單位：Excel「件數」加總。",
+            "narrative": narrative,
+            "road": road,
+            "intersection": intersection,
+            "time": time_data,
+            "cause": cause,
+            "age": age,
+            "vehicle": vehicle,
+            "trend": trend,
+        }
+
+    def raw_page(self, options: dict[str, Any]) -> dict[str, Any]:
+        query = str(options.get("search", "")).strip().lower()
+        page = max(1, int(options.get("page", 1)))
+        page_size = min(200, max(10, int(options.get("pageSize", 50))))
+        source = list(self.dataset.rows)
+        filters = options.get("filters") or {}
+        if filters:
+            source = [
+                row
+                for row in source
+                if all(
+                    not allowed or self.dataset.text(row, field) in allowed
+                    for field, allowed in filters.items()
+                    if self.dataset.position(field) is not None
+                )
+            ]
+        if query:
+            source = [
+                row
+                for row in source
+                if query in " ".join("" if value is None else str(value) for value in row).lower()
+            ]
+        total = len(source)
+        start = (page - 1) * page_size
+        return {
+            "headers": list(self.dataset.headers),
+            "rows": [list(row) for row in source[start : start + page_size]],
+            "total": total,
+            "page": page,
+            "pageSize": page_size,
+        }
+
+    def map_points(self, options: dict[str, Any]) -> dict[str, Any]:
+        lat_field = next(
+            (name for name in ("緯度", "GPS緯度", "Y座標", "Y", "lat", "latitude") if self.dataset.position(name) is not None),
+            None,
+        )
+        lng_field = next(
+            (name for name in ("經度", "GPS經度", "X座標", "X", "lng", "longitude") if self.dataset.position(name) is not None),
+            None,
+        )
+        if not lat_field or not lng_field:
+            raise ValueError(
+                "資料中找不到經緯度欄位。需要「經度」+「緯度」"
+                "（或「GPS經度」+「GPS緯度」或「X座標」+「Y座標」）。"
+            )
+        rows = self._filter_rows(options)
+        coordinate_count = 0
+        coordinate_lat_sum = 0.0
+        coordinate_lng_sum = 0.0
+        grouped: dict[str, dict[str, Any]] = defaultdict(
+            lambda: {"count": 0.0, "lats": [], "lngs": []}
+        )
+        for row in rows:
+            try:
+                lat, lng = _parse_coordinate(
+                    self.dataset.text(row, lat_field), self.dataset.text(row, lng_field)
+                )
+            except (ValueError, TypeError, IndexError):
+                continue
+            if lat is None or lng is None:
+                continue
+            count = self.dataset.number(row, "件數")
+            coordinate_count += 1
+            coordinate_lat_sum += lat
+            coordinate_lng_sum += lng
+            label = "／".join(
+                value
+                for value in (
+                    self.dataset.text(row, "路段"),
+                    self.dataset.text(row, "交叉路名"),
+                )
+                if value
+            ) or "未知路段"
+            info = grouped[label]
+            info["count"] += count
+            info["lats"].append(lat)
+            info["lngs"].append(lng)
+        markers = []
+        for label, info in sorted(grouped.items(), key=lambda item: -item[1]["count"])[:30]:
+            size = len(info["lats"])
+            markers.append({
+                "lat": sum(info["lats"]) / size,
+                "lng": sum(info["lngs"]) / size,
+                "count": int(info["count"]),
+                "label": label,
+            })
+        center = (
+            [coordinate_lat_sum / coordinate_count, coordinate_lng_sum / coordinate_count]
+            if coordinate_count
+            else [25.0118, 121.4590]
+        )
+        return {
+            "markers": markers,
+            "center": center,
+            "total": coordinate_count,
+            "coordField": f"{lng_field}/{lat_field}",
+        }

@@ -19,6 +19,10 @@ TrafficDataAnalyzer/
 ├── build_xlsx.mjs          # 共用 Excel 輸出工具，保留 xls/xlsm 流程
 ├── modules/
 │   ├── accident_analysis/
+│   │   ├── data/
+│   │   │   └── transformer.py      # 通用 Excel 資料 → AccidentDataset
+│   │   ├── analysis/
+│   │   │   └── service.py          # 篩選、排行、趨勢、摘要、原始資料、地圖標記
 │   │   ├── presentation/
 │   │   │   ├── presentation_generator.mjs
 │   │   │   ├── build_skeleton_autofill_template.mjs
@@ -37,14 +41,17 @@ TrafficDataAnalyzer/
 ## 建議的模組邊界
 
 ```text
-Excel → source detector → worksheet / Pivot Cache reader → 統一資料契約
-                                                          ↓
-                                              session → 分析模組
-                                                          ├→ 共用表格／圖表／地圖元件
-                                                          └→ 投影片輸出模組
+Excel → source detector → worksheet / Pivot Cache reader
+                                      ↓
+                      accident transformer → AccidentDataset
+                                      ↓
+                               session / service
+                                      ├→ 排行、趨勢、摘要、原始資料、地圖標記
+                                      ├→ 前端表格／圖表／地圖元件
+                                      └→ 投影片輸出模組
 ```
 
-資料讀取入口已抽到 `core/excel/`。一般工作表與 Pivot Cache 都輸出相同的 `headers`、`rows`、`sourceType`、`rowMode`、`sheetName` 與 `warnings`；事故基礎分析仍集中在既有 `app.js` / `web_server.py`，下一階段再拆成事故模組自己的 `data/transformer.py` 與 `analysis/service.py`。
+資料讀取入口位於 `core/excel/`，只負責辨識 Excel 資料來源。事故模組的 `data/transformer.py` 將通用資料轉為不可變的 `AccidentDataset`；`analysis/service.py` 集中處理事故篩選、排行、趨勢、摘要、原始資料分頁與地圖標記。`web_server.py` 只保留上傳、session、HTTP 回應及投影片程序呼叫。
 
 ## Git 維護建議
 
