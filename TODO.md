@@ -8,7 +8,8 @@
 - [x] 將事故篩選、排行、趨勢、摘要、原始資料及地圖標記拆到 `analysis/service.py`。
 - [x] 精簡 `web_server.py`，由事故 analysis service 回傳分析 API 結果。
 - [ ] 視部署環境決定是否加入舊版 `.xls` 轉檔器。
-- [ ] 建立事故簡報 `payload-builder.py`，移除兩支 generator 內重複的統計邏輯。
+- [x] 建立事故簡報 `payload_builder.py`，移除兩支 generator 內重複的統計邏輯。
+- [x] 讓新式與傳統 generator 共用版本化事故統計 payload。
 - [ ] 將 PPTX 物件搜尋、文字填值、表格填值與輸出抽到共用 helper。
 - [ ] 建立事故分析專用的 `slide-builder.mjs` 與 `template-config.mjs`。
 - [ ] 將投影片程序呼叫由 `web_server.py` 移到事故 presentation service。

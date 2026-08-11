@@ -1,6 +1,7 @@
 import unittest
 
 from modules.accident_analysis import AccidentAnalysisService, transform_accident_source
+from modules.accident_analysis.presentation import build_presentation_payload
 
 
 HEADERS = [
@@ -70,6 +71,7 @@ class AccidentAnalysisServiceTests(unittest.TestCase):
         self.assertEqual(result["metrics"][3]["value"], 3)
         self.assertEqual(result["road"][0], {"value": "文化路", "count": 5})
         self.assertEqual(result["intersection"][0], {"value": "文化路／民生路", "count": 5})
+        self.assertEqual(len(result["intersection"]), 1)
         self.assertEqual(result["time"][0], {"value": "18時", "count": 3})
         self.assertEqual(result["age"][0], {"value": "40歲", "count": 3})
         self.assertEqual(result["trend"], [
@@ -101,6 +103,42 @@ class AccidentAnalysisServiceTests(unittest.TestCase):
         self.assertEqual(result["markers"][0]["label"], "文化路／民生路")
         self.assertEqual(result["markers"][0]["count"], 5)
         self.assertAlmostEqual(result["markers"][0]["lat"], 25.02)
+
+
+class AccidentPresentationPayloadTests(unittest.TestCase):
+    def test_payload_handles_empty_numeric_groups_on_older_python(self):
+        payload = build_presentation_payload(dataset(), "115年1月1日至2月28日")
+        self.assertEqual(payload["overview"]["previousTotal"], None)
+        self.assertEqual(payload["distributions"]["unknownAge"], 1)
+
+    def test_payload_is_versioned_and_contains_shared_statistics(self):
+        payload = build_presentation_payload(dataset(), "115年1月1日至2月28日")
+        self.assertEqual(payload["schemaVersion"], "accident-weekly-report/v1")
+        self.assertEqual(payload["overview"]["total"], 6)
+        self.assertEqual(payload["overview"]["a1"], 1)
+        self.assertEqual(payload["overview"]["a2"], 5)
+        self.assertEqual(payload["rankings"]["roads"][0]["label"], "文化路")
+        self.assertEqual(payload["distributions"]["timeBuckets"][4]["count"], 2)
+        self.assertEqual(payload["distributions"]["timeBuckets"][8]["count"], 1)
+        self.assertEqual(payload["distributions"]["timeBuckets"][9]["count"], 3)
+        self.assertEqual(payload["a1Details"][0]["location"], "民生路")
+        self.assertEqual(payload["source"]["totalCount"], 6)
+        self.assertIn("本期共6件", payload["narrative"]["summaryShort"])
+
+    def test_payload_uses_latest_year_and_builds_comparison_once(self):
+        source = transform_accident_source({
+            "headers": HEADERS,
+            "rows": [
+                ["A2", 114, 1, 1, "0800", "舊路", "", "舊肇因", 30, "自小客", "", "", "", 4, 25, 121],
+                ["A2", 115, 1, 1, "0800", "新路", "", "新肇因", 30, "機車", "", "", "", 6, 25, 121],
+            ],
+            "sourceType": "worksheet",
+        })
+        payload = build_presentation_payload(source, "115年1月1日至1月31日")
+        self.assertEqual(payload["overview"]["total"], 6)
+        self.assertEqual(payload["overview"]["previousTotal"], 4)
+        self.assertEqual(payload["overview"]["changes"]["total"]["difference"], 2)
+        self.assertEqual(payload["rankings"]["roads"][0]["label"], "新路")
 
 
 if __name__ == "__main__":

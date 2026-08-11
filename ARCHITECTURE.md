@@ -24,7 +24,9 @@ TrafficDataAnalyzer/
 │   │   ├── analysis/
 │   │   │   └── service.py          # 篩選、排行、趨勢、摘要、原始資料、地圖標記
 │   │   ├── presentation/
+│   │   │   ├── payload_builder.py          # 共用、版本化的事故簡報資料契約
 │   │   │   ├── presentation_generator.mjs
+│   │   │   ├── traditional_presentation_generator.mjs
 │   │   │   ├── build_skeleton_autofill_template.mjs
 │   │   │   └── build_clean_template.mjs
 │   │   ├── templates/
@@ -48,10 +50,12 @@ Excel → source detector → worksheet / Pivot Cache reader
                                session / service
                                       ├→ 排行、趨勢、摘要、原始資料、地圖標記
                                       ├→ 前端表格／圖表／地圖元件
-                                      └→ 投影片輸出模組
+                                      └→ presentation payload builder
+                                                     ├→ 新式 generator
+                                                     └→ 傳統 generator
 ```
 
-資料讀取入口位於 `core/excel/`，只負責辨識 Excel 資料來源。事故模組的 `data/transformer.py` 將通用資料轉為不可變的 `AccidentDataset`；`analysis/service.py` 集中處理事故篩選、排行、趨勢、摘要、原始資料分頁與地圖標記。`web_server.py` 只保留上傳、session、HTTP 回應及投影片程序呼叫。
+資料讀取入口位於 `core/excel/`，只負責辨識 Excel 資料來源。事故模組的 `data/transformer.py` 將通用資料轉為不可變的 `AccidentDataset`；`analysis/service.py` 集中處理事故篩選、排行、趨勢、摘要、原始資料分頁與地圖標記。`presentation/payload_builder.py` 將共用統計整理成版本化 JSON，兩支 generator 只處理各自的模板物件、圖表樣式及輸出。`web_server.py` 只保留上傳、session、HTTP 回應及投影片程序呼叫。
 
 ## Git 維護建議
 

@@ -170,13 +170,10 @@ class AccidentAnalysisService:
         road = self._aggregate_field(rows, "路段", top)
         intersection = self._aggregate(
             rows,
-            lambda row: "／".join(
-                value
-                for value in (
-                    self.dataset.text(row, "路段"),
-                    self.dataset.text(row, "交叉路名"),
-                )
-                if value
+            lambda row: (
+                f"{self.dataset.text(row, '路段')}／{self.dataset.text(row, '交叉路名')}"
+                if self.dataset.text(row, "路段") and self.dataset.text(row, "交叉路名")
+                else ""
             ),
             top,
         ) if self.dataset.position("路段") is not None else []

@@ -18,6 +18,7 @@ from modules.accident_analysis import (
     AccidentAnalysisService,
     transform_accident_source,
 )
+from modules.accident_analysis.presentation import build_presentation_payload
 
 ROOT = Path(__file__).resolve().parent
 FRONTEND_ROOT = ROOT / "frontend"
@@ -205,10 +206,11 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     data_path = tempdir / "data.json"
                     output_path = tempdir / "traffic-accident-weekly-report.pptx"
-                    data_path.write_text(
-                        json.dumps(dataset.to_source_dict(), ensure_ascii=False), encoding="utf-8"
-                    )
                     period = str(body.get("period", "115年1月1日至8月31日")).strip() or "115年1月1日至8月31日"
+                    payload = build_presentation_payload(dataset, period)
+                    data_path.write_text(
+                        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+                    )
                     run = subprocess.run(
                         [node, str(generator), "--data", str(data_path),
                          "--template", str(template), "--output", str(output_path), "--period", period],
