@@ -208,8 +208,7 @@ button {
 }
 
 .large-chart canvas {
-  height: 520px;
-  min-height: 520px
+  min-height: 360px
 }
 
 /* === File Picker === */
@@ -344,6 +343,29 @@ canvas {
 .slide-version-actions button {
   min-width: 120px;
   font-weight: 700;
+}
+
+.major-controls {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.source-summary {
+  margin-top: 14px;
+  overflow: auto;
+}
+
+.source-summary td:last-child {
+  white-space: normal;
+  min-width: 220px;
+  text-align: left;
+}
+
+.rule-note {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-left: 4px solid var(--blue);
+  background: var(--pale);
+  color: var(--navy);
 }
 
 /* === Responsive === */

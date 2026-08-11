@@ -8,6 +8,9 @@
 - 趨勢表、圖表、事故標記地圖與摘要
 - 依骨架模板生成交通事故分析週報 PPTX
 - 清除目前 session，回到未載入狀態
+- 多份重大違規 Excel 的標準化、分類、排行與趨勢分析
+
+目前仍是「每位使用者在自己的電腦啟動 localhost」的離線工具。Session 已透過可替換、具執行緒鎖定的儲存層管理；未來若改成多人共用同一台主機，可換成磁碟或資料庫實作，但在加入帳號、權限、稽核紀錄與 HTTPS 前，不應直接開放區網存取。
 
 ## 啟動
 
@@ -23,11 +26,15 @@ python3 web_server.py
 
 瀏覽器開啟 `http://127.0.0.1:8765`。
 
+## 開發檢查
+
+執行 `python3 -m unittest discover -v` 檢查 Python 核心功能，執行 `npm run check` 檢查前端與 Node 生成器語法。Node 套件版本已記錄於 `package.json`；目前 `@oai/artifact-tool` 由本機 Codex runtime 提供，交付其他承辦人前仍需製作包含合法 Node runtime 與依賴的離線安裝包，不能只複製目前的 `node_modules` symlink。
+
 ## 目錄與模組化
 
 頂層 sidebar 不直接寫死功能，改由 `frontend/modules.js` 的模組註冊表產生。未來新增「人口資料分析」或其他資料模組時，只需新增模組設定與對應 view，再逐步抽離該模組的分析邏輯。
 
-詳細說明請見 [ARCHITECTURE.md](ARCHITECTURE.md)。事故專用工具與模板位於 `modules/accident_analysis/`；未來的重大違規資料整理預留於 `modules/major_violation/`。
+詳細說明請見 [ARCHITECTURE.md](ARCHITECTURE.md)。事故專用工具與模板位於 `modules/accident_analysis/`；重大違規模組位於 `modules/major_violation/`，可在網頁一次選取多份 Excel。跨檔資料目前保留原始列、不自動去重。
 
 ## 注意事項
 

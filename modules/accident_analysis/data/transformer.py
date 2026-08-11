@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 
 ACCIDENT_PREFERRED_HEADERS = {
@@ -67,6 +67,39 @@ class AccidentDataset:
             return float(row[position])
         except (TypeError, ValueError):
             return default
+
+    def total(self, rows: Iterable[tuple[Any, ...]] | None = None, field: str = "件數") -> float:
+        """Sum one numeric field with the dataset's normalization rules."""
+        return sum(self.number(row, field) for row in (self.rows if rows is None else rows))
+
+    def select(
+        self,
+        field: str,
+        allowed: set[str],
+        rows: Iterable[tuple[Any, ...]] | None = None,
+        *,
+        uppercase: bool = False,
+    ) -> list[tuple[Any, ...]]:
+        """Select rows by exact text values without duplicating column lookup logic."""
+        source = self.rows if rows is None else rows
+        if self.position(field) is None:
+            return []
+        return [
+            row
+            for row in source
+            if (self.text(row, field).upper() if uppercase else self.text(row, field)) in allowed
+        ]
+
+    def subset(self, rows: Iterable[tuple[Any, ...]]) -> "AccidentDataset":
+        """Create an immutable view-like dataset with identical source metadata."""
+        return AccidentDataset(
+            headers=self.headers,
+            rows=tuple(rows),
+            source_type=self.source_type,
+            row_mode=self.row_mode,
+            sheet_name=self.sheet_name,
+            warnings=self.warnings,
+        )
 
     def to_source_dict(self) -> dict[str, Any]:
         """Return the legacy headers/rows contract used by presentation generators."""

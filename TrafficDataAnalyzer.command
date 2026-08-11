@@ -2,7 +2,7 @@
 
 set -e
 SCRIPT_DIR="${0:A:h}"
-NODE_BIN="${NODE_BIN:-$(command -v node 2>/dev/null || echo /usr/local/bin/node)}"
+NODE_BIN="${NODE_BIN:-$(cd "$SCRIPT_DIR" && /usr/bin/python3 -c 'from core.runtime import find_node; node = find_node(); print(node or "")')}"
 if [[ ! -x "$NODE_BIN" ]]; then
   echo "錯誤：找不到 Node.js，請先安裝 Node.js 或設定 NODE_BIN 環境變數。" >&2
   exit 1

@@ -80,11 +80,38 @@ class AccidentAnalysisService:
     def __init__(self, dataset: AccidentDataset):
         self.dataset = dataset
 
+    def _event_date(self, row: tuple[Any, ...]) -> date | None:
+        try:
+            year = int(float(self.dataset.text(row, "發生年")))
+            month = int(float(self.dataset.text(row, "發生月")))
+            day = int(float(self.dataset.text(row, "發生日")))
+            return date(year + 1911 if year < 1911 else year, month, day)
+        except (TypeError, ValueError):
+            return None
+
+    def _date_range(self, options: dict[str, Any]) -> tuple[date | None, date | None]:
+        try:
+            start = date.fromisoformat(str(options["startDate"])) if options.get("startDate") else None
+            end = date.fromisoformat(str(options["endDate"])) if options.get("endDate") else None
+        except ValueError as exc:
+            raise ValueError("起訖日格式錯誤，請使用 YYYY-MM-DD。") from exc
+        if start and end and start > end:
+            raise ValueError("起日不可晚於迄日。")
+        if (start or end) and any(self.dataset.position(field) is None for field in ("發生年", "發生月", "發生日")):
+            raise ValueError("來源資料缺少「發生年／發生月／發生日」，無法依起訖日篩選。")
+        return start, end
+
     def _filter_rows(self, options: dict[str, Any]) -> list[tuple[Any, ...]]:
         pattern = str(options.get("pattern", "all"))
         custom = str(options.get("custom", "")).strip()
+        start_date, end_date = self._date_range(options)
         output = []
         for row in self.dataset.rows:
+            event_date = self._event_date(row) if start_date or end_date else None
+            if (start_date and (event_date is None or event_date < start_date)) or (
+                end_date and (event_date is None or event_date > end_date)
+            ):
+                continue
             cause = self.dataset.text(row, "肇事原因")
             vehicle = self.dataset.text(row, "當事者區分")
             drink = self.dataset.text(row, "飲酒情形")
@@ -166,7 +193,7 @@ class AccidentAnalysisService:
         if self.dataset.position("件數") is None:
             raise ValueError("來源資料沒有「件數」欄位。")
         top = int(options.get("top", 20))
-        total = int(sum(self.dataset.number(row, "件數") for row in rows))
+        total = _clean_number(self.dataset.total(rows))
         road = self._aggregate_field(rows, "路段", top)
         intersection = self._aggregate(
             rows,
@@ -195,8 +222,13 @@ class AccidentAnalysisService:
         vehicle = self._aggregate_field(rows, "當事者區分", top)
         trend = self._trend(rows, str(options.get("period", "month")))
         label = PATTERN_LABELS.get(options.get("pattern"), "自訂條件")
+        start_date, end_date = self._date_range(options)
+        date_rule = (
+            f"；發生日期：{start_date.isoformat() if start_date else '不限'}至{end_date.isoformat() if end_date else '不限'}"
+            if start_date or end_date else ""
+        )
 
-        narrative = f"本轄目前資料{label}，依Excel「件數」欄加總計{total:,}件。"
+        narrative = f"本轄目前資料{label}{date_rule}，依Excel「件數」欄加總計{total:,}件。"
         if road:
             narrative += f"易肇事路段以{road[0]['value']}計{road[0]['count']:,}件最多；"
         if cause:
@@ -213,7 +245,7 @@ class AccidentAnalysisService:
                 {"label": "肇因類別數", "value": len(cause)},
                 {"label": "資料列數", "value": len(rows)},
             ],
-            "rule": f"目前篩選：{label}；統計單位：Excel「件數」加總。",
+            "rule": f"目前篩選：{label}{date_rule}；統計單位：Excel「件數」加總。",
             "narrative": narrative,
             "road": road,
             "intersection": intersection,

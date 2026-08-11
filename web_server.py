@@ -2,63 +2,41 @@
 """Offline localhost traffic-accident analysis UI."""
 import io
 import json
+import logging
 import shutil
-import subprocess
 import tempfile
-import time
-import uuid
 from email import policy
 from email.parser import BytesParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import quote
 
 from core.excel import read_excel_source
+from core.session_store import InMemorySessionStore
 from modules.accident_analysis import (
     ACCIDENT_PREFERRED_HEADERS,
     AccidentAnalysisService,
     transform_accident_source,
 )
-from modules.accident_analysis.presentation import build_presentation_payload
+from modules.accident_analysis.presentation import AccidentPresentationService
+from modules.major_violation import MajorViolationAnalysisService, load_violation_workbooks
 
 ROOT = Path(__file__).resolve().parent
 FRONTEND_ROOT = ROOT / "frontend"
-ACCIDENT_MODULE_ROOT = ROOT / "modules" / "accident_analysis"
-ACCIDENT_PRESENTATION_ROOT = ACCIDENT_MODULE_ROOT / "presentation"
-ACCIDENT_TEMPLATE_ROOT = ACCIDENT_MODULE_ROOT / "templates"
-SESSIONS = {}
-SESSION_TTL = 1800  # 30 minutes
-MAX_SESSIONS = 10
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
 SUPPORTED_UPLOAD_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}
-PRESENTATION_VARIANTS = {
-    "modern": {
-        "label": "新式版本",
-        "template": ACCIDENT_TEMPLATE_ROOT / "板橋分局交通事故分析週報_骨架自動填值模板.pptx",
-        "generator": ACCIDENT_PRESENTATION_ROOT / "presentation_generator.mjs",
-        "filename": "交通事故分析週報_新式版本.pptx",
-    },
-    "traditional": {
-        "label": "傳統版本",
-        "template": ACCIDENT_TEMPLATE_ROOT / "交通事故分析_原版樣式_自動填值模板.pptx",
-        "generator": ACCIDENT_PRESENTATION_ROOT / "traditional_presentation_generator.mjs",
-        "filename": "交通事故分析週報_傳統版本.pptx",
-    },
-}
+SESSIONS = InMemorySessionStore(ttl_seconds=1800, max_sessions=10)
+PRESENTATIONS = AccidentPresentationService(ROOT)
+LOGGER = logging.getLogger("traffic_data_analyzer")
 
 
-def cleanup_sessions():
-    """Remove expired sessions and enforce maximum count."""
-    now = time.time()
-    expired = [k for k, v in SESSIONS.items() if now - v["created"] > SESSION_TTL]
-    for k in expired:
-        del SESSIONS[k]
-    if len(SESSIONS) > MAX_SESSIONS:
-        oldest = sorted(SESSIONS, key=lambda k: SESSIONS[k]["created"])
-        for k in oldest[: len(SESSIONS) - MAX_SESSIONS]:
-            del SESSIONS[k]
+def content_disposition(filename: str) -> str:
+    """Return an RFC 5987 download header that preserves Chinese filenames."""
+    suffix = Path(filename).suffix or ".bin"
+    return f"attachment; filename=download{suffix}; filename*=UTF-8''{quote(filename)}"
 
 
-def parse_upload(handler):
+def parse_uploads(handler, *, field_names: set[str]) -> list[object]:
     content_length = int(handler.headers.get("Content-Length", 0))
     if content_length > MAX_UPLOAD_BYTES:
         raise ValueError(f"檔案大小超過上限（{MAX_UPLOAD_BYTES // 1024 // 1024} MB）。")
@@ -69,14 +47,24 @@ def parse_upload(handler):
         + b"\r\n\r\n"
         + raw
     )
+    uploads = []
     for part in message.iter_attachments():
-        if part.get_param("name", header="content-disposition") == "file":
+        if part.get_param("name", header="content-disposition") in field_names:
             upload = type("Upload", (), {})()
-            upload.filename = part.get_filename() or ""
+            upload.filename = Path(part.get_filename() or "").name
             upload.file = io.BytesIO(part.get_payload(decode=True) or b"")
             if Path(upload.filename).suffix.lower() in SUPPORTED_UPLOAD_EXTENSIONS:
-                return upload
+                uploads.append(upload)
+            else:
+                raise ValueError("請選取 .xlsx 或 .xlsm 檔案；舊版 .xls 請先另存新格式。")
+    if uploads:
+        return uploads
     raise ValueError("請選取 .xlsx 或 .xlsm 檔案；舊版 .xls 請先另存新格式。")
+
+
+def parse_upload(handler):
+    """Compatibility wrapper for the accident module's one-file endpoint."""
+    return parse_uploads(handler, field_names={"file"})[0]
 
 
 def recover(upload):
@@ -92,6 +80,24 @@ def recover(upload):
             count_field="件數",
         ).to_dict()
         return transform_accident_source(source)
+    finally:
+        shutil.rmtree(tempdir, ignore_errors=True)
+
+
+def recover_major_violations(uploads) -> object:
+    """Persist one multipart batch briefly, then normalize every workbook together."""
+    tempdir = Path(tempfile.mkdtemp(prefix="major_violation_web_"))
+    try:
+        paths = []
+        for index, upload in enumerate(uploads, start=1):
+            suffix = Path(upload.filename).suffix.lower()
+            incoming_dir = tempdir / f"source_{index:03d}"
+            incoming_dir.mkdir()
+            incoming = incoming_dir / f"{Path(upload.filename).stem}{suffix}"
+            with incoming.open("wb") as file:
+                shutil.copyfileobj(upload.file, file)
+            paths.append(incoming)
+        return load_violation_workbooks(paths)
     finally:
         shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -112,8 +118,8 @@ MIME_TYPES = {
 
 
 class Handler(BaseHTTPRequestHandler):
-    def log_message(self, *_):
-        pass
+    def log_message(self, format_string, *args):
+        LOGGER.info("%s - %s", self.address_string(), format_string % args)
 
     def send_json(self, status_code, body):
         content = json.dumps(body, ensure_ascii=False).encode()
@@ -126,8 +132,7 @@ class Handler(BaseHTTPRequestHandler):
     def send_file(self, status_code, content, content_type, filename):
         self.send_response(status_code)
         self.send_header("Content-Type", content_type)
-        safe_filename = filename.encode("ascii", "ignore").decode() or "download.pptx"
-        self.send_header("Content-Disposition", f'attachment; filename="{safe_filename}"')
+        self.send_header("Content-Disposition", content_disposition(filename))
         self.send_header("Content-Length", str(len(content)))
         self.end_headers()
         self.wfile.write(content)
@@ -160,16 +165,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            cleanup_sessions()
-
             if self.path == "/load":
                 dataset = recover(parse_upload(self))
-                token = uuid.uuid4().hex
-                SESSIONS[token] = {
+                token = SESSIONS.create({
                     "dataset": dataset,
                     "service": AccidentAnalysisService(dataset),
-                    "created": time.time(),
-                }
+                })
                 return self.send_json(200, {
                     "token": token,
                     "fields": list(dataset.headers),
@@ -180,54 +181,60 @@ class Handler(BaseHTTPRequestHandler):
                     "warnings": list(dataset.warnings),
                 })
 
+            if self.path == "/major-violation/load":
+                dataset = recover_major_violations(parse_uploads(self, field_names={"files", "file"}))
+                if not dataset.records:
+                    details = " ".join(
+                        warning for source in dataset.sources for warning in source.warnings
+                    )
+                    raise ValueError(f"沒有成功載入任何重大違規資料。{details}")
+                token = SESSIONS.create({
+                    "module": "major-violation",
+                    "dataset": dataset,
+                    "service": MajorViolationAnalysisService(dataset),
+                })
+                start, end = dataset.date_range
+                return self.send_json(200, {
+                    "token": token,
+                    "rows": dataset.raw_row_count,
+                    "totalCount": dataset.total_count,
+                    "dateRange": {"start": start, "end": end},
+                    "deduplicationStatus": dataset.deduplication_status,
+                    "warnings": list(dataset.warnings),
+                    "sources": [{
+                        "fileName": source.file_name,
+                        "status": source.status,
+                        "rows": source.raw_row_count,
+                        "sheetName": source.sheet_name,
+                        "warnings": list(source.warnings),
+                    } for source in dataset.sources],
+                })
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
-            session = SESSIONS.get(body.get("token"))
+            token = str(body.get("token", ""))
+            if self.path == "/clear":
+                SESSIONS.delete(token)
+                return self.send_json(200, {"cleared": True})
+
+            session = SESSIONS.get(token)
             if not session:
                 raise ValueError("資料已失效，請重新載入檔案。")
             dataset = session["dataset"]
             service = session["service"]
-            session["created"] = time.time()  # refresh TTL on access
+
+            if self.path == "/major-violation/analyze":
+                if session.get("module") != "major-violation":
+                    raise ValueError("此 Session 不屬於重大違規分析，請重新載入資料。")
+                return self.send_json(200, service.analyze(body))
 
             if self.path == "/generate-pptx":
-                variant_key = str(body.get("variant", "modern")).strip().lower()
-                variant = PRESENTATION_VARIANTS.get(variant_key)
-                if variant is None:
-                    raise ValueError("未知的投影片版本，請選擇新式版本或傳統版本。")
-                template = variant["template"]
-                generator = variant["generator"]
-                if not template.is_file():
-                    raise ValueError(f"找不到{variant['label']}模板：{template.name}")
-                if not generator.is_file():
-                    raise ValueError(f"找不到{variant['label']}生成器：{generator.name}")
-                node = shutil.which("node") or "/opt/homebrew/bin/node"
-                if not Path(node).is_file():
-                    raise ValueError("找不到 Node.js，無法生成投影片。請先安裝 Node.js。")
-                tempdir = Path(tempfile.mkdtemp(prefix="traffic_ppt_"))
-                try:
-                    data_path = tempdir / "data.json"
-                    output_path = tempdir / "traffic-accident-weekly-report.pptx"
-                    period = str(body.get("period", "115年1月1日至8月31日")).strip() or "115年1月1日至8月31日"
-                    payload = build_presentation_payload(dataset, period)
-                    data_path.write_text(
-                        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
-                    )
-                    run = subprocess.run(
-                        [node, str(generator), "--data", str(data_path),
-                         "--template", str(template), "--output", str(output_path), "--period", period],
-                        capture_output=True,
-                        text=True,
-                        timeout=120,
-                    )
-                    if run.returncode or not output_path.is_file():
-                        raise ValueError(run.stderr.strip() or run.stdout.strip() or "投影片生成失敗。")
-                    return self.send_file(
-                        200,
-                        output_path.read_bytes(),
-                        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                        variant["filename"],
-                    )
-                finally:
-                    shutil.rmtree(tempdir, ignore_errors=True)
+                generated = PRESENTATIONS.generate(
+                    dataset,
+                    variant_key=body.get("variant", "modern"),
+                    period=body.get("period", "115年1月1日至8月31日"),
+                )
+                return self.send_file(
+                    200, generated.content, generated.content_type, generated.filename
+                )
 
             if self.path == "/map-points":
                 return self.send_json(200, service.map_points(body))
@@ -237,11 +244,14 @@ class Handler(BaseHTTPRequestHandler):
 
             return self.send_json(200, service.analyze(body))
         except (ValueError, KeyError, json.JSONDecodeError, IndexError) as exc:
+            LOGGER.warning("Request rejected on %s: %s", self.path, exc)
             self.send_json(400, {"error": str(exc)})
-        except Exception as exc:
-            self.send_json(500, {"error": str(exc)})
+        except Exception:
+            LOGGER.exception("Unhandled request failure on %s", self.path)
+            self.send_json(500, {"error": "伺服器處理失敗，請查看啟動視窗的錯誤紀錄。"})
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     print("請在瀏覽器開啟：http://127.0.0.1:8765")
     ThreadingHTTPServer(("127.0.0.1", 8765), Handler).serve_forever()

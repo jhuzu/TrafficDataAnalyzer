@@ -19,13 +19,12 @@
     <main class="content">
       <header class="topbar"><button id="menuButton" class="menu-button">☰</button><strong>交通事故分析工具</strong><span>本機
           localhost｜資料不會上傳</span></header>
-      <section class="card load-card">
-        <h1>載入資料</h1>
-        <label class="file-picker">上傳 Excel 檔案 <input id="fileInput" type="file" accept=".xlsx,.xlsm"></label>
-        <div class="actions"><button id="loadButton">載入檔案</button><button id="clearButton" class="secondary">清除資料</button><span id="status" class="status"></span></div>
-      </section>
-
       <section id="basicView" class="view">
+        <section class="card load-card">
+          <h1>載入資料</h1>
+          <label class="file-picker">上傳 Excel 檔案 <input id="fileInput" type="file" accept=".xlsx,.xlsm"></label>
+          <div class="actions"><button id="loadButton">載入檔案</button><button id="clearButton" class="secondary">清除資料</button><span id="status" class="status"></span></div>
+        </section>
         <div class="card">
           <h2>基礎分析</h2>
           <div class="controls">
@@ -35,6 +34,8 @@
                 <option value="drug">毒駕相關</option>
                 <option value="pedestrian">行人相關</option>
               </select></label>
+            <label>起日<input id="accidentStartDate" type="date"></label>
+            <label>迄日<input id="accidentEndDate" type="date"></label>
             <label class="metric-selector">分析項目<select id="basicMetric">
                 <option value="road">易肇事路段</option>
                 <option value="intersection">易肇事路口</option>
@@ -105,11 +106,40 @@
         </section>
       </section>
 
+      <section id="majorViolationView" class="view hidden">
+        <section class="card load-card">
+          <h1>重大違規資料載入</h1>
+          <p class="muted">可一次選取多份 .xlsx 或 .xlsm。系統保留各來源的成功、失敗與欄位警告，跨檔資料暫不去重。</p>
+          <label class="file-picker">上傳多份 Excel 檔案 <input id="majorFileInput" type="file" accept=".xlsx,.xlsm" multiple></label>
+          <div class="actions"><button id="majorLoadButton">載入並標準化</button><button id="majorClearButton" class="secondary">清除資料</button><span id="majorStatus" class="status"></span></div>
+          <div id="majorSources" class="source-summary"></div>
+        </section>
+        <section class="card">
+          <h2>重大違規分析</h2>
+          <div class="controls major-controls">
+            <label>起日<input id="majorStartDate" type="date"></label>
+            <label>迄日<input id="majorEndDate" type="date"></label>
+            <label>分類組別<select id="majorGroup"><option value="major">九大重大違規</option><option value="pedestrian">五大行人路權</option></select></label>
+            <label>分析類別<select id="majorCategory"></select></label>
+            <label>排行項目<select id="majorMetric"><option value="road">違規路段</option><option value="district">行政區</option><option value="hour">違規時段</option></select></label>
+            <label>趨勢週期<select id="majorPeriod"><option value="month">按月</option><option value="quarter">按季</option></select></label>
+            <label>顯示筆數<select id="majorTop"><option>10</option><option selected>20</option><option>50</option></select></label>
+          </div>
+          <div class="actions"><button id="majorAnalyzeButton">顯示分析</button></div>
+        </section>
+        <div id="majorMetrics" class="metrics"></div>
+        <div id="majorRule" class="rule-note"></div>
+        <div id="majorTabs" class="analysis-tabs" role="tablist"><button class="analysis-tab active" data-major-panel="categories">分類統計</button><button class="analysis-tab" data-major-panel="ranking">排行圖表</button><button class="analysis-tab" data-major-panel="trend">趨勢分析</button></div>
+        <section id="major-panel-categories" class="major-panel card"><h2>分類統計</h2><div id="majorCategories" class="table-wrap"></div></section>
+        <section id="major-panel-ranking" class="major-panel card hidden"><h2 id="majorRankingTitle">違規路段排行</h2><div id="majorRankingTable" class="table-wrap"></div><div class="large-chart"><canvas id="majorChart" height="520"></canvas></div></section>
+        <section id="major-panel-trend" class="major-panel card hidden"><h2 id="majorTrendTitle">類別趨勢</h2><div id="majorTrendTable" class="table-wrap"></div></section>
+      </section>
+
     </main>
   </div>
   <script src="/lib/leaflet.js"></script>
   <script src="/modules.js"></script>
-  <script src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 
 </html>

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from typing import Any, Iterable
+from typing import Any
 
 from ..analysis import AccidentAnalysisService
 from ..data import AccidentDataset
@@ -25,21 +25,6 @@ AGE_RANGES = (
 def _clean_number(value: int | float) -> int | float:
     number = float(value)
     return int(number) if number.is_integer() else round(number, 2)
-
-
-def _sum(dataset: AccidentDataset, rows: Iterable[tuple[Any, ...]]) -> int | float:
-    return _clean_number(sum(dataset.number(row, "件數") for row in rows))
-
-
-def _subset(dataset: AccidentDataset, rows: Iterable[tuple[Any, ...]]) -> AccidentDataset:
-    return AccidentDataset(
-        headers=dataset.headers,
-        rows=tuple(rows),
-        source_type=dataset.source_type,
-        row_mode=dataset.row_mode,
-        sheet_name=dataset.sheet_name,
-        warnings=dataset.warnings,
-    )
 
 
 def _rank_items(items: list[dict[str, Any]], total: int | float) -> list[dict[str, Any]]:
@@ -146,31 +131,25 @@ def build_presentation_payload(
     )
 
     def a1a2(rows: list[tuple[Any, ...]]) -> list[tuple[Any, ...]]:
-        selected = [
-            row for row in rows
-            if dataset.text(row, "事故類別").upper() in {"A1", "A2"}
-        ]
+        selected = dataset.select("事故類別", {"A1", "A2"}, rows, uppercase=True)
         return selected or rows
 
     rows = a1a2(current_rows)
     prior_rows = a1a2(previous_rows) if previous_rows else []
-    current_dataset = _subset(dataset, rows)
+    current_dataset = dataset.subset(rows)
     analysis = AccidentAnalysisService(current_dataset).analyze(
         {"pattern": "all", "period": "month", "top": 20}
     )
     total = analysis["metrics"][0]["value"]
 
-    a1_rows = [row for row in rows if dataset.text(row, "事故類別").upper() == "A1"]
-    a2_rows = [row for row in rows if dataset.text(row, "事故類別").upper() == "A2"]
-    previous_a1_rows = [
-        row for row in prior_rows if dataset.text(row, "事故類別").upper() == "A1"
-    ]
-    previous_a2_rows = [
-        row for row in prior_rows if dataset.text(row, "事故類別").upper() == "A2"
-    ]
-    a1_total, a2_total = _sum(dataset, a1_rows), _sum(dataset, a2_rows)
-    previous_total = _sum(dataset, prior_rows)
-    previous_a1, previous_a2 = _sum(dataset, previous_a1_rows), _sum(dataset, previous_a2_rows)
+    a1_rows = dataset.select("事故類別", {"A1"}, rows, uppercase=True)
+    a2_rows = dataset.select("事故類別", {"A2"}, rows, uppercase=True)
+    previous_a1_rows = dataset.select("事故類別", {"A1"}, prior_rows, uppercase=True)
+    previous_a2_rows = dataset.select("事故類別", {"A2"}, prior_rows, uppercase=True)
+    a1_total, a2_total = _clean_number(dataset.total(a1_rows)), _clean_number(dataset.total(a2_rows))
+    previous_total = _clean_number(dataset.total(prior_rows))
+    previous_a1 = _clean_number(dataset.total(previous_a1_rows))
+    previous_a2 = _clean_number(dataset.total(previous_a2_rows))
 
     rankings = {
         "roads": _rank_items(analysis["road"], total),
@@ -178,7 +157,7 @@ def build_presentation_payload(
         "causes": _rank_items(analysis["cause"], total),
         "vehicles": _rank_items(analysis["vehicle"], total),
     }
-    a1_analysis = AccidentAnalysisService(_subset(dataset, a1_rows)).analyze(
+    a1_analysis = AccidentAnalysisService(dataset.subset(a1_rows)).analyze(
         {"pattern": "all", "period": "month", "top": 2}
     ) if a1_rows else {"road": []}
     rankings["a1Roads"] = _rank_items(a1_analysis["road"], a1_total)

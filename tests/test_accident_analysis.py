@@ -87,6 +87,21 @@ class AccidentAnalysisServiceTests(unittest.TestCase):
                 result = self.service.analyze({"pattern": pattern, "period": "month", "top": 10})
                 self.assertEqual(result["metrics"][0]["value"], expected)
 
+    def test_start_and_end_dates_filter_analysis_and_map(self):
+        options = {
+            "pattern": "all", "period": "month", "top": 20,
+            "startDate": "2026-02-01", "endDate": "2026-02-10",
+        }
+        result = self.service.analyze(options)
+        self.assertEqual(result["metrics"][0]["value"], 1)
+        self.assertEqual(result["road"], [{"value": "民生路", "count": 1}])
+        self.assertIn("2026-02-01至2026-02-10", result["rule"])
+        self.assertEqual(self.service.map_points(options)["total"], 1)
+
+    def test_invalid_date_range_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "起日不可"):
+            self.service.analyze({"startDate": "2026-03-01", "endDate": "2026-02-01"})
+
     def test_raw_page_search_and_filters(self):
         searched = self.service.raw_page({"search": "A1", "page": 1, "pageSize": 20})
         self.assertEqual(searched["total"], 1)
