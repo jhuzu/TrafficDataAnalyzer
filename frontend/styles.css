@@ -341,6 +341,11 @@ canvas {
   grid-template-columns: minmax(220px, 360px);
 }
 
+.slide-version-actions button {
+  min-width: 120px;
+  font-weight: 700;
+}
+
 /* === Responsive === */
 @media (max-width: 900px) {
   .app-shell {

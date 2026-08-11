@@ -44,19 +44,20 @@ async function loadData() {
   }
 }
 
-async function generateSlides() {
+async function generateSlides(variant, buttonId) {
   if (!state.token) {
     $("slideStatus").textContent = "請先載入 .xlsm 檔案。";
     return;
   }
-  const button = $("generateSlidesButton");
+  const button = $(buttonId);
+  const variantLabel = variant === "traditional" ? "傳統版本" : "新式版本";
   button.disabled = true;
-  $("slideStatus").textContent = "正在套用模板並生成投影片…";
+  $("slideStatus").textContent = `正在生成${variantLabel}投影片…`;
   try {
     const response = await fetch("/generate-pptx", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: state.token, period: $("slidePeriod").value.trim() }),
+      body: JSON.stringify({ token: state.token, period: $("slidePeriod").value.trim(), variant }),
     });
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
@@ -66,10 +67,10 @@ async function generateSlides() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "交通事故分析週報.pptx";
+    link.download = `交通事故分析週報_${variantLabel}.pptx`;
     link.click();
     URL.revokeObjectURL(url);
-    $("slideStatus").textContent = "已生成並下載投影片。";
+    $("slideStatus").textContent = `已生成並下載${variantLabel}。`;
   } catch (error) {
     $("slideStatus").textContent = error.message;
   } finally {
@@ -280,7 +281,8 @@ function clearData() {
 
 $("loadButton").onclick = loadData;
 $("clearButton").onclick = clearData;
-$("generateSlidesButton").onclick = generateSlides;
+$("generateModernSlidesButton").onclick = () => generateSlides("modern", "generateModernSlidesButton");
+$("generateTraditionalSlidesButton").onclick = () => generateSlides("traditional", "generateTraditionalSlidesButton");
 $("analyzeButton").onclick = analyze;
 $("pattern").onchange = analyze;
 $("period").onchange = analyze;

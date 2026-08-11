@@ -90,16 +90,19 @@
         </section>
         <section id="panel-slides" class="analysis-panel card hidden">
           <h2>生成交通事故分析週報</h2>
-          <p class="muted">請先載入 .xlsm；系統會使用事故分析模組的骨架模板填入目前分析資料。</p>
+          <p class="muted">請先載入 .xlsm，再選擇投影片版型。兩種版本皆在本機離線統計與生成。</p>
           <div class="controls slide-controls">
             <label>統計期間(！這邊沒有篩選功能！)<input id="slidePeriod" value="115年1月1日至8月31日"></label>
           </div>
-          <div class="actions"><button id="generateSlidesButton">生成並下載 PPTX</button><span id="slideStatus"
-              class="status"></span></div>
+          <div class="actions slide-version-actions">
+            <button id="generateModernSlidesButton">新式版本</button>
+            <button id="generateTraditionalSlidesButton" class="secondary">傳統版本</button>
+            <span id="slideStatus" class="status"></span>
+          </div>
           <div class="slide-outline">
             <h3>週報架構</h3>
             <p>封面 → 總體分析 → 易肇事路段 → 易肇事路口 → 時段與肇因 → 年齡與車種 → A1 明細 → 大執法策略</p>
-            <p class="muted">地圖框位沿用模板，之後可替換成離線圖資截圖。</p>
+            <p class="muted">新式版本採清爽骨架；傳統版本沿用原始人工週報版面。地圖皆保留人工置入空間，圖表由程式離線重繪。</p>
           </div>
         </section>
       </section>

@@ -15,13 +15,15 @@ if (!inputPath || !templatePath || !outputPath) throw new Error("需要 --data�
 
 const source = JSON.parse(await fs.readFile(inputPath, "utf8"));
 const headers = source.headers || [];
-const rows = source.rows || [];
+const sourceRows = source.rows || [];
 const idx = Object.fromEntries(headers.map((name, i) => [name, i]));
 const value = (row, field) => {
   const raw = field in idx ? row[idx[field]] : "";
   return raw === null || raw === undefined ? "" : String(raw).trim();
 };
 const count = row => Number(value(row, "件數")) || 0;
+const a1a2Rows = sourceRows.filter(row => ["A1", "A2"].includes(value(row, "事故類別").toUpperCase()));
+const rows = a1a2Rows.length ? a1a2Rows : sourceRows;
 const fmt = n => Math.round(Number(n) || 0).toLocaleString("zh-TW");
 const pct = (n, total) => total ? `${(n * 100 / total).toFixed(1)}%` : "0.0%";
 const group = (sourceRows, field, limit = 10, transform = v => v) => {

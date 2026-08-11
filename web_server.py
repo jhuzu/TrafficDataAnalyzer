@@ -26,9 +26,20 @@ SESSIONS = {}
 SESSION_TTL = 1800  # 30 minutes
 MAX_SESSIONS = 10
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
-DEFAULT_TEMPLATE_PATHS = (
-    ACCIDENT_TEMPLATE_ROOT / "板橋分局交通事故分析週報_骨架自動填值模板.pptx",
-)
+PRESENTATION_VARIANTS = {
+    "modern": {
+        "label": "新式版本",
+        "template": ACCIDENT_TEMPLATE_ROOT / "板橋分局交通事故分析週報_骨架自動填值模板.pptx",
+        "generator": ACCIDENT_PRESENTATION_ROOT / "presentation_generator.mjs",
+        "filename": "交通事故分析週報_新式版本.pptx",
+    },
+    "traditional": {
+        "label": "傳統版本",
+        "template": ACCIDENT_TEMPLATE_ROOT / "交通事故分析_原版樣式_自動填值模板.pptx",
+        "generator": ACCIDENT_PRESENTATION_ROOT / "traditional_presentation_generator.mjs",
+        "filename": "交通事故分析週報_傳統版本.pptx",
+    },
+}
 
 
 def cleanup_sessions():
@@ -319,11 +330,16 @@ class Handler(BaseHTTPRequestHandler):
             session["created"] = time.time()  # refresh TTL on access
 
             if self.path == "/generate-pptx":
-                template = next((candidate for candidate in DEFAULT_TEMPLATE_PATHS if candidate.is_file()), None)
-                if template is None:
-                    raise ValueError(
-                        "找不到週報模板。請確認專案內存在「板橋分局交通事故分析週報_骨架自動填值模板.pptx」。"
-                    )
+                variant_key = str(body.get("variant", "modern")).strip().lower()
+                variant = PRESENTATION_VARIANTS.get(variant_key)
+                if variant is None:
+                    raise ValueError("未知的投影片版本，請選擇新式版本或傳統版本。")
+                template = variant["template"]
+                generator = variant["generator"]
+                if not template.is_file():
+                    raise ValueError(f"找不到{variant['label']}模板：{template.name}")
+                if not generator.is_file():
+                    raise ValueError(f"找不到{variant['label']}生成器：{generator.name}")
                 node = shutil.which("node") or "/opt/homebrew/bin/node"
                 if not Path(node).is_file():
                     raise ValueError("找不到 Node.js，無法生成投影片。請先安裝 Node.js。")
@@ -334,7 +350,7 @@ class Handler(BaseHTTPRequestHandler):
                     data_path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
                     period = str(body.get("period", "115年1月1日至8月31日")).strip() or "115年1月1日至8月31日"
                     run = subprocess.run(
-                        [node, str(ACCIDENT_PRESENTATION_ROOT / "presentation_generator.mjs"), "--data", str(data_path),
+                        [node, str(generator), "--data", str(data_path),
                          "--template", str(template), "--output", str(output_path), "--period", period],
                         capture_output=True,
                         text=True,
@@ -346,7 +362,7 @@ class Handler(BaseHTTPRequestHandler):
                         200,
                         output_path.read_bytes(),
                         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                        "交通事故分析週報.pptx",
+                        variant["filename"],
                     )
                 finally:
                     shutil.rmtree(tempdir, ignore_errors=True)
