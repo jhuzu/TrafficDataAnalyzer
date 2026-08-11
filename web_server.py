@@ -6,7 +6,6 @@ import math
 import re
 import shutil
 import subprocess
-import sys
 import tempfile
 import time
 import uuid
@@ -17,6 +16,8 @@ from email.parser import BytesParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from core.excel import read_excel_source
+
 ROOT = Path(__file__).resolve().parent
 FRONTEND_ROOT = ROOT / "frontend"
 ACCIDENT_MODULE_ROOT = ROOT / "modules" / "accident_analysis"
@@ -26,6 +27,12 @@ SESSIONS = {}
 SESSION_TTL = 1800  # 30 minutes
 MAX_SESSIONS = 10
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
+SUPPORTED_UPLOAD_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}
+ACCIDENT_PREFERRED_HEADERS = {
+    "事故類別", "發生年", "發生月", "發生日", "發生時間", "路段", "交叉路名",
+    "肇事原因", "年齡", "當事者區分", "件數", "飲酒情形", "施用毒品情形",
+    "唾液毒品檢測", "經度", "緯度", "X座標", "Y座標",
+}
 PRESENTATION_VARIANTS = {
     "modern": {
         "label": "新式版本",
@@ -70,25 +77,23 @@ def parse_upload(handler):
             upload = type("Upload", (), {})()
             upload.filename = part.get_filename() or ""
             upload.file = io.BytesIO(part.get_payload(decode=True) or b"")
-            if upload.filename.lower().endswith(".xlsm"):
+            if Path(upload.filename).suffix.lower() in SUPPORTED_UPLOAD_EXTENSIONS:
                 return upload
-    raise ValueError("請選取 .xlsm 檔案。")
+    raise ValueError("請選取 .xlsx 或 .xlsm 檔案；舊版 .xls 請先另存新格式。")
 
 
 def recover(upload):
     tempdir = Path(tempfile.mkdtemp(prefix="traffic_web_"))
     try:
-        incoming, cache = tempdir / "input.xlsm", tempdir / "cache.json"
+        suffix = Path(upload.filename).suffix.lower()
+        incoming = tempdir / f"input{suffix}"
         with incoming.open("wb") as f:
             shutil.copyfileobj(upload.file, f)
-        run = subprocess.run(
-            [sys.executable, str(ROOT / "extract_pivot_cache.py"), str(incoming), str(cache)],
-            capture_output=True,
-            text=True,
-        )
-        if run.returncode:
-            raise ValueError(run.stderr.strip() or run.stdout.strip() or "無法讀取 Pivot Cache。")
-        return json.loads(cache.read_text(encoding="utf-8"))
+        return read_excel_source(
+            incoming,
+            preferred_headers=ACCIDENT_PREFERRED_HEADERS,
+            count_field="件數",
+        ).to_dict()
     finally:
         shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -320,6 +325,10 @@ class Handler(BaseHTTPRequestHandler):
                     "token": token,
                     "fields": data["headers"],
                     "rows": len(data["rows"]),
+                    "sourceType": data.get("sourceType", "unknown"),
+                    "rowMode": data.get("rowMode", "unknown"),
+                    "sheetName": data.get("sheetName"),
+                    "warnings": data.get("warnings", []),
                 })
 
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))

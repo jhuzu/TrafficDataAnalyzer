@@ -19,7 +19,7 @@ function setStatus(message) {
 
 function formData() {
   const file = $("fileInput").files[0];
-  if (!file) throw Error("請先選取 .xlsm 檔案。");
+  if (!file) throw Error("請先選取 .xlsx 或 .xlsm 檔案。");
   const data = new FormData();
   data.append("file", file);
   return data;
@@ -31,13 +31,18 @@ function formData() {
 
 async function loadData() {
   try {
-    setStatus("正在讀取 Pivot Cache…");
+    setStatus("正在辨識 Excel 資料來源…");
     const response = await fetch("/load", { method: "POST", body: formData() });
     const data = await response.json();
     if (!response.ok) throw Error(data.error);
 
     state.token = data.token;
-    setStatus(`已載入 ${data.rows.toLocaleString()} 筆資料。`);
+    const sourceName = data.sourceType === "pivot-cache"
+      ? "Pivot Cache"
+      : `工作表${data.sheetName ? `「${data.sheetName}」` : ""}`;
+    const countRule = data.rowMode === "raw" ? "每列按 1 件計算" : "使用「件數」欄加總";
+    const warning = (data.warnings || []).join(" ");
+    setStatus(`已由${sourceName}載入 ${data.rows.toLocaleString()} 筆資料；${countRule}。${warning ? ` ${warning}` : ""}`);
     await analyze();
   } catch (error) {
     setStatus(error.message);
@@ -46,7 +51,7 @@ async function loadData() {
 
 async function generateSlides(variant, buttonId) {
   if (!state.token) {
-    $("slideStatus").textContent = "請先載入 .xlsm 檔案。";
+    $("slideStatus").textContent = "請先載入 .xlsx 或 .xlsm 檔案。";
     return;
   }
   const button = $(buttonId);
@@ -254,7 +259,7 @@ function clearData() {
   state.token = "";
   state.latest = null;
   $("fileInput").value = "";
-  $("status").textContent = "已清除資料，請重新載入 .xlsm。";
+  $("status").textContent = "已清除資料，請重新載入 Excel。";
   $("slideStatus").textContent = "";
   $("metrics").innerHTML = "";
   $("analysisTable").innerHTML = "<p>尚未載入資料</p>";

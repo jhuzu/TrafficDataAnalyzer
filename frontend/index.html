@@ -21,7 +21,7 @@
           localhost｜資料不會上傳</span></header>
       <section class="card load-card">
         <h1>載入資料</h1>
-        <label class="file-picker">上傳.xlsm 檔案 <input id="fileInput" type="file" accept=".xlsm"></label>
+        <label class="file-picker">上傳 Excel 檔案 <input id="fileInput" type="file" accept=".xlsx,.xlsm"></label>
         <div class="actions"><button id="loadButton">載入檔案</button><button id="clearButton" class="secondary">清除資料</button><span id="status" class="status"></span></div>
       </section>
 
@@ -90,7 +90,7 @@
         </section>
         <section id="panel-slides" class="analysis-panel card hidden">
           <h2>生成交通事故分析週報</h2>
-          <p class="muted">請先載入 .xlsm，再選擇投影片版型。兩種版本皆在本機離線統計與生成。</p>
+          <p class="muted">請先載入 .xlsx 或 .xlsm，再選擇投影片版型。兩種版本皆在本機離線統計與生成。</p>
           <div class="controls slide-controls">
             <label>統計期間(！這邊沒有篩選功能！)<input id="slidePeriod" value="115年1月1日至8月31日"></label>
           </div>

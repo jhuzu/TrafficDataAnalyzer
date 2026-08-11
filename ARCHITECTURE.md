@@ -2,6 +2,12 @@
 
 ```text
 TrafficDataAnalyzer/
+├── core/
+│   └── excel/
+│       ├── models.py       # 所有 Excel reader 的統一資料契約
+│       ├── source_detector.py
+│       ├── worksheet_reader.py
+│       └── pivot_cache_reader.py
 ├── frontend/
 │   ├── index.html          # 頁面骨架與 tab panel
 │   ├── styles.css          # 全域樣式
@@ -9,7 +15,7 @@ TrafficDataAnalyzer/
 │   ├── app.js              # 前端狀態、事件與分析畫面
 │   └── lib/                # Leaflet 與地圖套件
 ├── web_server.py           # localhost API、session 與模組路由
-├── extract_pivot_cache.py  # 從 xlsm 還原 Pivot Cache 資料
+├── extract_pivot_cache.py  # 舊一鍵工具相容入口
 ├── build_xlsx.mjs          # 共用 Excel 輸出工具，保留 xls/xlsm 流程
 ├── modules/
 │   ├── accident_analysis/
@@ -31,11 +37,14 @@ TrafficDataAnalyzer/
 ## 建議的模組邊界
 
 ```text
-資料載入 → session/data adapter → 分析模組 → 共用表格/圖表/地圖元件
-                                      └→ 投影片輸出模組
+Excel → source detector → worksheet / Pivot Cache reader → 統一資料契約
+                                                          ↓
+                                              session → 分析模組
+                                                          ├→ 共用表格／圖表／地圖元件
+                                                          └→ 投影片輸出模組
 ```
 
-目前先完成低風險模組化：sidebar 使用模組註冊表，事故專用 PPT 工具與模板已移入 `modules/accident_analysis/`，`build_xlsx.mjs` 與 Pivot Cache 讀取保留為共用工具。事故基礎分析仍集中在既有 `app.js` / `web_server.py`，下一階段再拆成各模組自己的 `analysis/`、`api/` 與 `presentation/`。
+資料讀取入口已抽到 `core/excel/`。一般工作表與 Pivot Cache 都輸出相同的 `headers`、`rows`、`sourceType`、`rowMode`、`sheetName` 與 `warnings`；事故基礎分析仍集中在既有 `app.js` / `web_server.py`，下一階段再拆成事故模組自己的 `data/transformer.py` 與 `analysis/service.py`。
 
 ## Git 維護建議
 
