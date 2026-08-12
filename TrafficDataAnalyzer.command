@@ -2,9 +2,16 @@
 
 set -e
 SCRIPT_DIR="${0:A:h}"
-NODE_BIN="${NODE_BIN:-$(cd "$SCRIPT_DIR" && /usr/bin/python3 -c 'from core.runtime import find_node; node = find_node(); print(node or "")')}"
-if [[ ! -x "$NODE_BIN" ]]; then
-  echo "錯誤：找不到 Node.js，請先安裝 Node.js 或設定 NODE_BIN 環境變數。" >&2
+PYTHON_BIN="${PYTHON_BIN:-$SCRIPT_DIR/.venv/bin/python}"
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  PYTHON_BIN="$(command -v python3 2>/dev/null || true)"
+fi
+if [[ -z "$PYTHON_BIN" || ! -x "$PYTHON_BIN" ]]; then
+  echo "錯誤：找不到 Python 3。" >&2
+  exit 1
+fi
+if ! "$PYTHON_BIN" -c 'import openpyxl' >/dev/null 2>&1; then
+  echo "錯誤：缺少 Excel 匯出依賴。請先雙擊 安裝Python依賴.command。" >&2
   exit 1
 fi
 
@@ -24,7 +31,7 @@ if [[ -e "$OUTPUT" ]]; then
   OUTPUT="${BASE}_$(date +%Y%m%d-%H%M%S).xlsx"
 fi
 
-/usr/bin/python3 "$SCRIPT_DIR/extract_pivot_cache.py" "$INPUT" "$TEMP_JSON"
-"$NODE_BIN" "$SCRIPT_DIR/build_xlsx.mjs" "$TEMP_JSON" "$OUTPUT"
+"$PYTHON_BIN" "$SCRIPT_DIR/extract_pivot_cache.py" "$INPUT" "$TEMP_JSON"
+"$PYTHON_BIN" "$SCRIPT_DIR/build_xlsx.py" "$TEMP_JSON" "$OUTPUT"
 osascript -e "display notification \"$(basename "$OUTPUT")\" with title \"完整分析已完成\""
 echo "完成：$OUTPUT"

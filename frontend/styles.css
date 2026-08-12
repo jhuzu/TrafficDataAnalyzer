@@ -283,6 +283,17 @@ button {
   overflow: auto;
 }
 
+.performance-table th, .performance-table td { text-align: center; white-space: nowrap; border: 1px solid #1f2937; }
+.performance-table tr.performance-target > * { background: #fff; font-weight: 700; }
+.performance-table tr.performance-actual > * { background: #fff; }
+.performance-table tr.performance-rate > * { background: #f6f6f6; font-weight: 700; }
+.performance-table .performance-cell { cursor: pointer; }
+.performance-table .performance-cell:hover, .performance-table .performance-cell:focus { outline: 2px solid #f97316; outline-offset: -2px; }
+.performance-table .performance-marked { color: #dc2626; font-weight: 800; }
+.performance-choices { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 10px 0; }
+.performance-choices label { color: var(--ink); font-weight: 600; }
+.performance-choices input { vertical-align: middle; }
+
 table {
   width: 100%;
   border-collapse: collapse;

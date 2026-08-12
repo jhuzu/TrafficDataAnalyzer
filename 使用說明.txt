@@ -17,7 +17,7 @@
 5. 地圖框位先保留模板預留圖框，後續可替換離線圖資。
 
 使用方式
-1. 將 `TrafficDataAnalyzer.command`、`extract_pivot_cache.py`、`build_xlsx.mjs` 放在同一個專案中。
+1. 先依 README 建立 `.venv` 並安裝 `requirements.txt`，再將 `TrafficDataAnalyzer.command`、`extract_pivot_cache.py`、`build_xlsx.py` 放在同一個專案中。
 2. 連按兩下 `TrafficDataAnalyzer.command`。
 3. 在跳出的視窗選取含樞紐分析表的 .xlsm 檔。
 4. 工具完成後，會在原檔同一個資料夾產生「原檔名_完整自動分析.xlsx」。

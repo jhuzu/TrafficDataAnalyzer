@@ -6,29 +6,33 @@
 - 自動比較一般工作表與 Pivot Cache，使用欄位較完整的資料來源
 - 事故資料的路段、路口、時段、肇因、年齡與車種分析
 - 趨勢表、圖表、事故標記地圖與摘要
-- 依骨架模板生成交通事故分析週報 PPTX
+- 使用 Python 生成可編輯的交通事故分析週報 PPTX（新式／傳統配色）
 - 清除目前 session，回到未載入狀態
 - 多份重大違規 Excel 的標準化、分類、排行與趨勢分析
+- 重大違規週報績效：由使用者另行上傳「績效目標值」Excel，再依所隊、違規類別與起迄日計算達成值及單頁投影片
 
 目前仍是「每位使用者在自己的電腦啟動 localhost」的離線工具。Session 已透過可替換、具執行緒鎖定的儲存層管理；未來若改成多人共用同一台主機，可換成磁碟或資料庫實作，但在加入帳號、權限、稽核紀錄與 HTTPS 前，不應直接開放區網存取。
 
 ## 啟動
 
+先建立虛擬環境並安裝公開 Python 套件：
+
 ```bash
+./安裝Python依賴.command
 ./啟動網頁版.command
 ```
 
 或執行：
 
 ```bash
-python3 web_server.py
+.venv/bin/python web_server.py
 ```
 
 瀏覽器開啟 `http://127.0.0.1:8765`。
 
 ## 開發檢查
 
-執行 `python3 -m unittest discover -v` 檢查 Python 核心功能，執行 `npm run check` 檢查前端與 Node 生成器語法。Node 套件版本已記錄於 `package.json`；目前 `@oai/artifact-tool` 由本機 Codex runtime 提供，交付其他承辦人前仍需製作包含合法 Node runtime 與依賴的離線安裝包，不能只複製目前的 `node_modules` symlink。
+執行 `.venv/bin/python -m unittest discover -v` 檢查核心與匯出功能。前端 JavaScript 為瀏覽器原生模組，無需 Node.js 建置工具。
 
 ## 目錄與模組化
 
@@ -41,5 +45,5 @@ python3 web_server.py
 - 一般原始資料沒有「件數」欄位時，每列自動按 1 件計算；彙整資料保留「件數」欄加總。
 - 舊版 `.xls` 請先在 Excel 另存為 `.xlsx` 或 `.xlsm`。
 - 原始 Excel 與 PPT 模板不放入版本控制；請依個資與機關資料規範管理。
-- `node_modules` 為本機 runtime symlink，不應提交。
+- Python 套件版本記錄於 `requirements.txt`；`.venv/` 不應提交。
 - 生成檔請放入 `generated/`，測試與暫存檔請放入 `tmp/`。

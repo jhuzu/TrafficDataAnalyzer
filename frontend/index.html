@@ -17,13 +17,13 @@
     </aside>
 
     <main class="content">
-      <header class="topbar"><button id="menuButton" class="menu-button">☰</button><strong>交通事故分析工具</strong><span>本機
-          localhost｜資料不會上傳</span></header>
+      <div class="muted" style="text-align: right; margin-bottom: 12px;"><span>本機 localhost｜資料不會上傳</span></div>
       <section id="basicView" class="view">
         <section class="card load-card">
-          <h1>載入資料</h1>
+          <h1>事故資料載入</h1>
           <label class="file-picker">上傳 Excel 檔案 <input id="fileInput" type="file" accept=".xlsx,.xlsm"></label>
-          <div class="actions"><button id="loadButton">載入檔案</button><button id="clearButton" class="secondary">清除資料</button><span id="status" class="status"></span></div>
+          <div class="actions"><button id="loadButton">載入檔案</button><button id="clearButton"
+              class="secondary">清除資料</button><span id="status" class="status"></span></div>
         </section>
         <div class="card">
           <h2>基礎分析</h2>
@@ -101,38 +101,86 @@
           <div class="slide-outline">
             <h3>週報架構</h3>
             <p>封面 → 總體分析 → 易肇事路段 → 易肇事路口 → 時段與肇因 → 年齡與車種 → A1 明細 → 大執法策略</p>
-            <p class="muted">新式版本採清爽骨架；傳統版本沿用原始人工週報版面。地圖皆保留人工置入空間，圖表由程式離線重繪。</p>
+          <p class="muted">新式版本為清爽的自動分析版面；傳統版本沿用常用人工週報版面。地圖皆保留人工置入空間，圖表由程式離線重繪。</p>
           </div>
         </section>
       </section>
 
       <section id="majorViolationView" class="view hidden">
-        <section class="card load-card">
+        <div class="analysis-tabs" role="tablist"><button class="analysis-tab active" data-major-workspace="data">大資料載入</button><button class="analysis-tab" data-major-workspace="performance">週報績效</button></div>
+        <section class="card load-card major-workspace-data">
           <h1>重大違規資料載入</h1>
           <p class="muted">可一次選取多份 .xlsx 或 .xlsm。系統保留各來源的成功、失敗與欄位警告，跨檔資料暫不去重。</p>
-          <label class="file-picker">上傳多份 Excel 檔案 <input id="majorFileInput" type="file" accept=".xlsx,.xlsm" multiple></label>
-          <div class="actions"><button id="majorLoadButton">載入並標準化</button><button id="majorClearButton" class="secondary">清除資料</button><span id="majorStatus" class="status"></span></div>
+          <label class="file-picker">上傳多份 Excel 檔案 <input id="majorFileInput" type="file" accept=".xlsx,.xlsm"
+              multiple></label>
+          <div class="actions"><button id="majorLoadButton">載入並標準化</button><button id="majorClearButton"
+              class="secondary">清除資料</button><span id="majorStatus" class="status"></span></div>
           <div id="majorSources" class="source-summary"></div>
         </section>
-        <section class="card">
+        <section class="card major-workspace-performance hidden">
+          <h2>週報績效資料</h2>
+          <p class="muted">目標值與統計值可分開上傳；統計值可一次提供多檔，並以它的項目決定週報合計表可勾選欄位。</p>
+          <label>目標週期<select id="majorPerformancePeriod"><option value="month" selected>月（預設）</option><option value="week">週</option></select></label>
+          <label>起日<input id="majorPerformanceStartDate" type="date"></label>
+          <label>迄日<input id="majorPerformanceEndDate" type="date"></label>
+          <label class="file-picker">上傳績效目標值 <input id="majorTargetFileInput" type="file" accept=".xlsx,.xlsm"></label>
+          <div class="actions"><button id="majorTargetLoadButton" class="secondary">載入目標值</button><button id="majorPerformanceClearButton" class="secondary">清除週報資料</button><span id="majorTargetStatus" class="status"></span></div>
+          <label class="file-picker">上傳統計值 <input id="majorStatisticsFileInput" type="file" accept=".xlsx,.xlsm" multiple></label>
+          <div class="actions"><button id="majorStatisticsLoadButton" class="secondary">載入統計值</button><span id="majorStatisticsStatus" class="status"></span></div>
+        </section>
+        <section class="card major-workspace-data">
           <h2>重大違規分析</h2>
           <div class="controls major-controls">
             <label>起日<input id="majorStartDate" type="date"></label>
             <label>迄日<input id="majorEndDate" type="date"></label>
-            <label>分類組別<select id="majorGroup"><option value="major">九大重大違規</option><option value="pedestrian">五大行人路權</option></select></label>
+            <label>分類組別<select id="majorGroup">
+                <option value="major">九大重大違規</option>
+                <option value="pedestrian">五大行人路權</option>
+              </select></label>
             <label>分析類別<select id="majorCategory"></select></label>
-            <label>排行項目<select id="majorMetric"><option value="road">違規路段</option><option value="district">行政區</option><option value="hour">違規時段</option></select></label>
-            <label>趨勢週期<select id="majorPeriod"><option value="month">按月</option><option value="quarter">按季</option></select></label>
-            <label>顯示筆數<select id="majorTop"><option>10</option><option selected>20</option><option>50</option></select></label>
+            <label>排行項目<select id="majorMetric">
+                <option value="road">違規路段</option>
+                <option value="district">行政區</option>
+                <option value="hour">違規時段</option>
+              </select></label>
+            <label>趨勢週期<select id="majorPeriod">
+                <option value="month">按月</option>
+                <option value="quarter">按季</option>
+              </select></label>
+            <label>顯示筆數<select id="majorTop">
+                <option>10</option>
+                <option selected>20</option>
+                <option>50</option>
+              </select></label>
           </div>
           <div class="actions"><button id="majorAnalyzeButton">顯示分析</button></div>
         </section>
-        <div id="majorMetrics" class="metrics"></div>
-        <div id="majorRule" class="rule-note"></div>
-        <div id="majorTabs" class="analysis-tabs" role="tablist"><button class="analysis-tab active" data-major-panel="categories">分類統計</button><button class="analysis-tab" data-major-panel="ranking">排行圖表</button><button class="analysis-tab" data-major-panel="trend">趨勢分析</button></div>
-        <section id="major-panel-categories" class="major-panel card"><h2>分類統計</h2><div id="majorCategories" class="table-wrap"></div></section>
-        <section id="major-panel-ranking" class="major-panel card hidden"><h2 id="majorRankingTitle">違規路段排行</h2><div id="majorRankingTable" class="table-wrap"></div><div class="large-chart"><canvas id="majorChart" height="520"></canvas></div></section>
-        <section id="major-panel-trend" class="major-panel card hidden"><h2 id="majorTrendTitle">類別趨勢</h2><div id="majorTrendTable" class="table-wrap"></div></section>
+        <div id="majorMetrics" class="metrics major-workspace-data"></div>
+        <div id="majorRule" class="rule-note major-workspace-data"></div>
+        <div id="majorTabs" class="analysis-tabs major-workspace-data" role="tablist"><button class="analysis-tab active"
+            data-major-panel="categories">分類統計</button><button class="analysis-tab"
+            data-major-panel="ranking">排行圖表</button><button class="analysis-tab" data-major-panel="trend">趨勢分析</button>
+        </div>
+        <section id="major-panel-categories" class="major-panel card major-workspace-data">
+          <h2>分類統計</h2>
+          <div id="majorCategories" class="table-wrap"></div>
+        </section>
+        <section id="major-panel-ranking" class="major-panel card hidden major-workspace-data">
+          <h2 id="majorRankingTitle">違規路段排行</h2>
+          <div id="majorRankingTable" class="table-wrap"></div>
+          <div class="large-chart"><canvas id="majorChart" height="520"></canvas></div>
+        </section>
+        <section id="major-panel-trend" class="major-panel card hidden major-workspace-data">
+          <h2 id="majorTrendTitle">類別趨勢</h2>
+          <div id="majorTrendTable" class="table-wrap"></div>
+        </section>
+        <section id="major-panel-performance" class="major-panel card hidden major-workspace-performance">
+          <h2>重大違規週報績效</h2>
+          <p class="muted">預設以月目標值呈現。上傳統計值後，取締件數以統計值檔為準；未上傳時才由重大違規原始資料計算。</p>
+          <div id="majorPerformanceChoices" class="performance-choices"><p>載入統計值後可選擇合計表項目。</p></div>
+          <div class="actions"><button id="majorPerformanceButton">產生合計表</button><button id="majorPerformanceImageButton" class="secondary">儲存表格截圖</button><button id="majorPerformanceSlidesButton" class="secondary">生成單頁績效投影片</button><span id="majorPerformanceStatus" class="status"></span></div>
+          <div id="majorPerformanceTable" class="table-wrap"><p>請先載入績效目標值與統計值。</p></div>
+        </section>
       </section>
 
     </main>
