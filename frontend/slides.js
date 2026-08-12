@@ -1,6 +1,6 @@
 import { LatestRequest, isAbort, jsonOptions } from "./api.js";
 
-export function createSlideGenerator({ getToken, getPeriod, status }) {
+export function createSlideGenerator({ getToken, status }) {
   const request = new LatestRequest();
 
   async function generate(variant, button) {
@@ -14,7 +14,7 @@ export function createSlideGenerator({ getToken, getPeriod, status }) {
     try {
       const blob = await request.blob(
         "/generate-pptx",
-        jsonOptions({ token: getToken(), period: getPeriod().trim(), variant }),
+        jsonOptions({ token: getToken(), variant }),
       );
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");

@@ -20,7 +20,7 @@ from modules.accident_analysis import (
 )
 from modules.accident_analysis.presentation import AccidentPresentationService
 from modules.major_violation import (
-    MajorViolationAnalysisService, build_performance, generate_performance_pptx,
+    MajorViolationAnalysisService, build_performance,
     load_performance_statistics, load_performance_targets, load_violation_workbooks,
 )
 
@@ -295,20 +295,6 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("請先提供「績效目標值」Excel。")
                 source_dataset = dataset if session.get("module") == "major-violation" else None
                 return self.send_json(200, build_performance(source_dataset, targets, body.get("startDate"), body.get("endDate"), session.get("performance_statistics"), body.get("selectedKeys")))
-
-            if self.path == "/major-violation/generate-performance-pptx":
-                targets = session.get("performance_targets")
-                if targets is None:
-                    raise ValueError("請先提供「績效目標值」Excel。")
-                source_dataset = dataset if session.get("module") == "major-violation" else None
-                performance = build_performance(source_dataset, targets, body.get("startDate"), body.get("endDate"), session.get("performance_statistics"), body.get("selectedKeys"))
-                template = ROOT / "modules" / "major_violation" / "templates" / "重大違規績效投影片.pptx"
-                if not template.is_file():
-                    raise ValueError("找不到重大違規績效投影片模板。")
-                with tempfile.TemporaryDirectory(prefix="major_performance_ppt_") as temporary:
-                    output = Path(temporary) / "重大違規績效.pptx"
-                    generate_performance_pptx(performance, template, output)
-                    return self.send_file(200, output.read_bytes(), "application/vnd.openxmlformats-officedocument.presentationml.presentation", "重大交通違規績效.pptx")
 
             if self.path == "/generate-pptx":
                 if dataset is None:

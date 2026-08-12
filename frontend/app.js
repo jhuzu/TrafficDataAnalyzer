@@ -33,7 +33,6 @@ const accidentMap = createAccidentMap({
 });
 const slides = createSlideGenerator({
   getToken: () => state.token,
-  getPeriod: () => $("slidePeriod").value,
   status: $("slideStatus"),
 });
 
@@ -350,17 +349,6 @@ async function loadMajorPerformance() {
   } catch (error) { if (!isAbort(error)) $("majorPerformanceStatus").textContent = error.message; }
 }
 
-async function generateMajorPerformanceSlides() {
-  try {
-    $("majorPerformanceStatus").textContent = "正在生成單頁績效投影片…";
-    const blob = await majorPerformanceRequest.blob("/major-violation/generate-performance-pptx", jsonOptions(majorPerformanceOptions()));
-    const url = URL.createObjectURL(blob), link = document.createElement("a");
-    link.href = url; link.download = "重大交通違規績效.pptx"; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-    $("majorPerformanceStatus").textContent = "已生成單頁績效投影片。";
-  } catch (error) { if (!isAbort(error)) $("majorPerformanceStatus").textContent = error.message; }
-}
-
 async function clearMajorData() {
   majorLoadRequest.abort();
   majorAnalysisRequest.abort();
@@ -456,7 +444,6 @@ async function clearData() {
   $("basicMetric").value = "road";
   $("period").value = "month";
   $("top").value = "20";
-  $("slidePeriod").value = "115年1月1日至8月31日";
   chart.clear();
   accidentMap.clear();
   showAnalysisPanel("table");
@@ -491,7 +478,6 @@ $("majorTargetLoadButton").onclick = loadMajorTargets;
 $("majorStatisticsLoadButton").onclick = loadMajorStatistics;
 $("majorPerformanceButton").onclick = loadMajorPerformance;
 $("majorPerformanceImageButton").onclick = saveMajorPerformanceImage;
-$("majorPerformanceSlidesButton").onclick = generateMajorPerformanceSlides;
 $("majorGroup").onchange = () => {
   if (!state.majorLatest) return;
   renderMajorAnalysis();

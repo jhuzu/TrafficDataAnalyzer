@@ -16,7 +16,7 @@ from .analysis import (
     PEDESTRIAN_RIGHTS_RULES,
     MajorViolationAnalysisService,
 )
-from .performance import build_performance, generate_performance_pptx, load_performance_statistics, load_performance_targets
+from .performance import build_performance, load_performance_statistics, load_performance_targets
 
 __all__ = [
     "VIOLATION_PREFERRED_HEADERS",
@@ -32,7 +32,6 @@ __all__ = [
     "PEDESTRIAN_RIGHTS_RULES",
     "MajorViolationAnalysisService",
     "build_performance",
-    "generate_performance_pptx",
     "load_performance_targets",
     "load_performance_statistics",
 ]

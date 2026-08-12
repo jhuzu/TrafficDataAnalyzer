@@ -1,19 +1,17 @@
 import tempfile
 import unittest
-from io import BytesIO
 from pathlib import Path
 
 from openpyxl import Workbook
-from pptx import Presentation
 
 from modules.major_violation.data.transformer import transform_violation_source
 from modules.major_violation.performance import (
-    build_performance, generate_performance_pptx, load_performance_statistics, load_performance_targets,
+    build_performance, load_performance_statistics, load_performance_targets,
 )
 
 
 class MajorViolationPerformanceTests(unittest.TestCase):
-    def test_target_file_drives_unit_totals_and_presentation(self):
+    def test_target_file_drives_unit_totals(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target_path = root / "targets.xlsx"
@@ -27,10 +25,6 @@ class MajorViolationPerformanceTests(unittest.TestCase):
             result = build_performance(dataset, targets, "2026-08-01", "2026-08-09")
             self.assertEqual([item["label"] for item in result["categories"]], ["闖紅燈", "逆向行駛", "轉彎未依規定"])
             self.assertEqual(result["rows"][0]["cells"][0]["actual"], 2)
-            output = root / "performance.pptx"
-            template = Path(__file__).resolve().parents[1] / "modules" / "major_violation" / "templates" / "重大違規績效投影片.pptx"
-            generate_performance_pptx(result, template, output)
-            self.assertEqual(len(Presentation(BytesIO(output.read_bytes())).slides), 1)
 
     def test_statistics_file_overrides_actual_and_exposes_available_items(self):
         with tempfile.TemporaryDirectory() as directory:

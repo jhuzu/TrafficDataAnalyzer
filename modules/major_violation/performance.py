@@ -4,13 +4,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
-from PIL import Image, ImageDraw, ImageFont
-from pptx import Presentation
 
 from .data.schema import ViolationDataset
 
@@ -176,48 +173,3 @@ def build_performance(dataset: ViolationDataset | None, targets: PerformanceTarg
     if unavailable: warnings.append(f"未能計算取締件數：{'、'.join(unavailable)}。{' '.join(requirement for key, _label, _matchers, predicate, requirement in categories if predicate is None)}")
     month_totals = [{"key": key, "target": value["target"], "actual": value["actual"], "difference": value["actual"] - value["target"] if value["actual"] is not None else None, "rate": value["actual"] / value["target"] if value["target"] and value["actual"] is not None else None} for key, value in totals.items()]
     return {"period": {"start": start, "end": end}, "targetSource": targets.source_name, "statisticsSources": list(statistics.source_names) if statistics else [], "warnings": warnings + (list(statistics.warnings) if statistics else []), "categories": [{"key": key, "label": label, "targetHeader": targets.matched_headers.get(key, "未提供"), "available": predicate is not None} for key, label, _matchers, predicate, _requirement in categories], "availableStatisticKeys": list(statistics.available_keys) if statistics else [], "rows": rows, "totals": month_totals}
-
-
-def _font(size: int, bold=False):
-    path = "/System/Library/Fonts/PingFang.ttc"
-    return ImageFont.truetype(path, size, index=0) if Path(path).is_file() else ImageFont.load_default()
-
-
-def generate_performance_pptx(performance: dict, template_path: str | Path, output_path: str | Path) -> None:
-    """Use the supplied one-page layout and replace its data-table picture."""
-    presentation = Presentation(template_path)
-    slide = presentation.slides[0]
-    period = performance["period"]
-    title = f"一、重大交通違規績效({period['start'] or '全部資料'} 至 {period['end'] or '全部資料'})"
-    for shape in slide.shapes:
-        if getattr(shape, "has_text_frame", False) and "重大交通違規績效" in shape.text:
-            shape.text = title
-    categories, rows = performance["categories"], performance["rows"]
-    image = Image.new("RGB", (1600, max(520, 125 + len(rows) * 105)), "white")
-    draw = ImageDraw.Draw(image); bold, normal = _font(24, True), _font(20)
-    columns = len(categories); first = 180; width = (1600 - first) // max(1, columns)
-    draw.rectangle((0, 0, 1599, image.height - 1), outline="#ed7d31", width=8)
-    draw.rectangle((0, 0, 1599, 68), fill="#f2f2f2", outline="black")
-    draw.text((50, 21), "單位／項目", fill="black", font=bold)
-    for index, category in enumerate(categories):
-        x = first + index * width
-        draw.line((x, 0, x, image.height), fill="black", width=2)
-        draw.text((x + 8, 12), category["label"], fill="#d00000", font=bold)
-    for index, row in enumerate(rows):
-        y = 68 + index * 105
-        draw.line((0, y, 1600, y), fill="black", width=2)
-        draw.text((18, y + 12), row["unit"], fill="black", font=bold)
-        for col, cell in enumerate(row["cells"]):
-            x = first + col * width
-            draw.text((x + 8, y + 8), f"目標 {cell['target']:,.0f}", fill="black", font=normal)
-            achieved_text = "待補資料" if cell["actual"] is None else f"{cell['actual']:,.0f}"
-            draw.text((x + 8, y + 39), f"達成 {achieved_text}", fill="#d00000" if cell["actual"] in (None, 0) else "black", font=normal)
-            rate = "—" if cell["rate"] is None else f"{cell['rate'] * 100:.0f}%"
-            draw.text((x + 8, y + 70), f"達成率 {rate}", fill="#d00000" if cell["rate"] is not None and cell["rate"] < 1 else "black", font=normal)
-    stream = BytesIO(); image.save(stream, "PNG"); stream.seek(0)
-    picture = next((shape for shape in slide.shapes if shape.shape_type == 13), None)
-    if picture is not None:
-        left, top, width, height = picture.left, picture.top, picture.width, picture.height
-        picture._element.getparent().remove(picture._element)
-        slide.shapes.add_picture(stream, left, top, width=width, height=height)
-    presentation.save(output_path)

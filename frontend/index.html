@@ -146,20 +146,12 @@
         <section id="panel-slides" class="analysis-panel card hidden">
           <h2>生成交通事故分析週報</h2>
           <p class="muted">請先載入 .xlsx 或 .xlsm，再選擇投影片版型。兩種版本皆在本機離線統計與生成。</p>
-          <div class="controls slide-controls">
-            <label>
-              統計期間(！這邊沒有篩選功能！)
-              <input id="slidePeriod" value="115年1月1日至8月31日">
-            </label>
-          </div>
           <div class="actions slide-version-actions">
             <button id="generateModernSlidesButton">新式版本</button>
             <button id="generateTraditionalSlidesButton" class="secondary">傳統版本</button>
             <span id="slideStatus" class="status"></span>
           </div>
           <div class="slide-outline">
-            <h3>週報架構</h3>
-            <p>封面 → 總體分析 → 易肇事路段 → 易肇事路口 → 時段與肇因 → 年齡與車種 → A1 明細 → 大執法策略</p>
             <p class="muted">新式版本為清爽的自動分析版面；傳統版本沿用常用人工週報版面。地圖皆保留人工置入空間，圖表由程式離線重繪。</p>
           </div>
         </section>
@@ -315,7 +307,6 @@
           <div class="actions">
             <button id="majorPerformanceButton">產生合計表</button>
             <button id="majorPerformanceImageButton" class="secondary">儲存表格截圖</button>
-            <button id="majorPerformanceSlidesButton" class="secondary">生成單頁績效投影片</button>
             <span id="majorPerformanceStatus" class="status"></span>
           </div>
           <div id="majorPerformanceTable" class="table-wrap">
