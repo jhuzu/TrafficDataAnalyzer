@@ -1,6 +1,7 @@
 import unittest
 
 from modules.accident_analysis import AccidentAnalysisService, transform_accident_source
+from modules.accident_analysis.data import BanqiaoRoadReference
 from modules.accident_analysis.presentation import build_presentation_payload
 
 
@@ -133,8 +134,62 @@ class AccidentAnalysisServiceTests(unittest.TestCase):
         self.assertEqual(result["total"], 3)
         self.assertEqual(result["coordField"], "經度/緯度")
         self.assertEqual(result["markers"][0]["label"], "文化路／民生路")
-        self.assertEqual(result["markers"][0]["count"], 5)
-        self.assertAlmostEqual(result["markers"][0]["lat"], 25.02)
+        self.assertEqual([marker["count"] for marker in result["markers"]], [3, 2, 1])
+        self.assertAlmostEqual(result["markers"][0]["lat"], 25.03)
+
+    def test_map_repairs_invalid_coordinate_from_matching_road_and_intersection(self):
+        source = dataset().to_source_dict()
+        source["rows"] = [
+            list(source["rows"][0]),
+            list(source["rows"][1]),
+            list(source["rows"][2]),
+        ]
+        source["rows"][1][5] = "文化路"
+        source["rows"][1][6] = "民生路"
+        source["rows"][1][14] = 9
+        source["rows"][1][15] = 120
+        result = AccidentAnalysisService(transform_accident_source(source)).map_points({"pattern": "all"})
+        self.assertEqual(result["repaired"], 1)
+        self.assertEqual(result["unlocated"], 0)
+        self.assertEqual(result["unlocatedRecords"], [])
+        self.assertEqual(sum(marker["count"] for marker in result["markers"]), 6)
+        self.assertEqual(len(result["markers"]), 3)
+
+    def test_map_returns_manual_confirmation_details_when_no_reference_exists(self):
+        source = dataset().to_source_dict()
+        source["headers"].append("受理案號")
+        source["rows"] = [[*source["rows"][0], "CASE-001"]]
+        source["rows"][0][5] = "無參照路段"
+        source["rows"][0][6] = "無參照路口"
+        source["rows"][0][14] = 9
+        source["rows"][0][15] = 120
+        result = AccidentAnalysisService(transform_accident_source(source)).map_points({"pattern": "all"})
+        self.assertEqual(result["total"], 0)
+        self.assertEqual(result["unlocatedRecords"], [{
+            "caseNumber": "CASE-001", "road": "無參照路段", "intersection": "無參照路口",
+        }])
+
+    def test_map_repairs_coordinate_shared_by_many_unrelated_roads(self):
+        source = dataset().to_source_dict()
+        source["rows"] = []
+        for road, cross, lng, lat in (
+            ("甲路", "甲路口", 121.456, 25.010),
+            ("甲路", "甲路口", 121.460, 25.012),
+            ("乙路", "乙路口", 121.456, 25.010),
+            ("丙路", "丙路口", 121.456, 25.010),
+        ):
+            row = list(ROWS[0]); row[5] = road; row[6] = cross; row[14] = lat; row[15] = lng; source["rows"].append(row)
+        result = AccidentAnalysisService(transform_accident_source(source)).map_points({"pattern": "all"})
+        self.assertEqual(result["suspicious"], 3)
+        self.assertEqual(result["repaired"], 1)
+        self.assertEqual(result["unlocated"], 2)
+        self.assertEqual(result["markers"][0]["lat"], 25.012)
+
+    def test_bundled_road_reference_resolves_known_banqiao_intersection(self):
+        reference = BanqiaoRoadReference().lookup("板橋區中正路", "民生路一段")
+        self.assertIsNotNone(reference)
+        self.assertEqual(reference.source, "路段／路口對照")
+        self.assertAlmostEqual(reference.lat, 25.0112708)
 
 
 class AccidentPresentationPayloadTests(unittest.TestCase):

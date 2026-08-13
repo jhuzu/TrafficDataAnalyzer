@@ -8,7 +8,7 @@ from collections import defaultdict
 from datetime import date
 from typing import Any, Callable, Iterable
 
-from ..data import AccidentDataset
+from ..data import AccidentDataset, BanqiaoRoadReference
 
 
 PATTERN_LABELS = {
@@ -17,6 +17,10 @@ PATTERN_LABELS = {
     "drug": "毒駕相關",
     "pedestrian": "行人相關",
 }
+
+# This project currently analyzes Banqiao traffic data.  Coordinates outside
+# this envelope are retained in the dataset, but are not trusted for map plots.
+BANQIAO_MAP_BOUNDS = (24.97, 25.04, 121.42, 121.49)
 
 
 def _clean_number(value: float) -> int | float:
@@ -74,11 +78,17 @@ def _parse_coordinate(raw_lat: Any, raw_lng: Any) -> tuple[float | None, float |
     return lat_value, lng_value
 
 
+def _is_banqiao_coordinate(lat: float, lng: float) -> bool:
+    min_lat, max_lat, min_lng, max_lng = BANQIAO_MAP_BOUNDS
+    return min_lat <= lat <= max_lat and min_lng <= lng <= max_lng
+
+
 class AccidentAnalysisService:
     """Query and aggregate one immutable accident dataset."""
 
-    def __init__(self, dataset: AccidentDataset):
+    def __init__(self, dataset: AccidentDataset, road_reference: BanqiaoRoadReference | None = None):
         self.dataset = dataset
+        self.road_reference = road_reference or BanqiaoRoadReference()
 
     def _event_date(self, row: tuple[Any, ...]) -> date | None:
         try:
@@ -332,9 +342,8 @@ class AccidentAnalysisService:
         coordinate_count = 0
         coordinate_lat_sum = 0.0
         coordinate_lng_sum = 0.0
-        grouped: dict[str, dict[str, Any]] = defaultdict(
-            lambda: {"count": 0.0, "lats": [], "lngs": []}
-        )
+        parsed_rows: list[tuple[tuple[Any, ...], float | None, float | None]] = []
+        coordinate_roads: dict[tuple[float, float], set[str]] = defaultdict(set)
         for row in rows:
             try:
                 lat, lng = _parse_coordinate(
@@ -342,8 +351,64 @@ class AccidentAnalysisService:
                 )
             except (ValueError, TypeError, IndexError):
                 continue
-            if lat is None or lng is None:
-                continue
+            if lat is not None and lng is not None and _is_banqiao_coordinate(lat, lng):
+                coordinate_roads[(round(lat, 5), round(lng, 5))].add(self.dataset.text(row, "路段"))
+
+        def is_trusted_coordinate(lat: float | None, lng: float | None) -> bool:
+            if lat is None or lng is None or not _is_banqiao_coordinate(lat, lng):
+                return False
+            # A coordinate shared by many unrelated road names is a known
+            # source-data failure, not a genuine multi-road intersection.
+            return len(coordinate_roads[(round(lat, 5), round(lng, 5))]) <= 2
+
+        exact_references: dict[tuple[str, str], list[tuple[float, float]]] = defaultdict(list)
+        road_references: dict[str, list[tuple[float, float]]] = defaultdict(list)
+        for row in rows:
+            try:
+                lat, lng = _parse_coordinate(
+                    self.dataset.text(row, lat_field), self.dataset.text(row, lng_field)
+                )
+            except (ValueError, TypeError, IndexError):
+                lat, lng = None, None
+            parsed_rows.append((row, lat, lng))
+            if is_trusted_coordinate(lat, lng):
+                road = self.dataset.text(row, "路段")
+                intersection = self.dataset.text(row, "交叉路名")
+                if road:
+                    exact_references[(road, intersection)].append((lat, lng))
+                    road_references[road].append((lat, lng))
+
+        repaired_count = 0
+        referenced_count = 0
+        unlocated_count = 0
+        suspicious_count = 0
+        unlocated_records: list[dict[str, str]] = []
+        grouped: dict[tuple[float, float], dict[str, Any]] = defaultdict(
+            lambda: {"count": 0.0, "labels": []}
+        )
+        for row, lat, lng in parsed_rows:
+            road = self.dataset.text(row, "路段")
+            intersection = self.dataset.text(row, "交叉路名")
+            reference = self.road_reference.lookup(road, intersection)
+            coordinate_source = reference.source if reference else "Excel X/Y"
+            if reference:
+                lat, lng = reference.lat, reference.lng
+                referenced_count += 1
+            if not is_trusted_coordinate(lat, lng):
+                if lat is not None and lng is not None and _is_banqiao_coordinate(lat, lng):
+                    suspicious_count += 1
+                references = exact_references.get((road, intersection)) or road_references.get(road)
+                if not references:
+                    unlocated_count += 1
+                    unlocated_records.append({
+                        "caseNumber": self.dataset.text(row, "受理案號") or "未提供",
+                        "road": road or "未提供",
+                        "intersection": intersection or "未提供",
+                    })
+                    continue
+                lat = sum(point[0] for point in references) / len(references)
+                lng = sum(point[1] for point in references) / len(references)
+                repaired_count += 1
             count = self.dataset.number(row, "件數")
             coordinate_count += 1
             coordinate_lat_sum += lat
@@ -356,18 +421,23 @@ class AccidentAnalysisService:
                 )
                 if value
             ) or "未知路段"
-            info = grouped[label]
+            # Aggregate only matching coordinate cells.  Averaging every
+            # incident with the same road name can move a long road's marker
+            # somewhere that is not on the road.
+            coordinate_key = (round(lat, 5), round(lng, 5))
+            info = grouped[coordinate_key]
             info["count"] += count
-            info["lats"].append(lat)
-            info["lngs"].append(lng)
+            if label not in info["labels"]:
+                info["labels"].append(label)
+            info.setdefault("sources", set()).add(coordinate_source)
         markers = []
-        for label, info in sorted(grouped.items(), key=lambda item: -item[1]["count"])[:30]:
-            size = len(info["lats"])
+        for (lat, lng), info in sorted(grouped.items(), key=lambda item: -item[1]["count"]):
             markers.append({
-                "lat": sum(info["lats"]) / size,
-                "lng": sum(info["lngs"]) / size,
+                "lat": lat,
+                "lng": lng,
                 "count": int(info["count"]),
-                "label": label,
+                "label": "、".join(info["labels"][:3]),
+                "source": "、".join(sorted(info["sources"])),
             })
         center = (
             [coordinate_lat_sum / coordinate_count, coordinate_lng_sum / coordinate_count]
@@ -379,4 +449,9 @@ class AccidentAnalysisService:
             "center": center,
             "total": coordinate_count,
             "coordField": f"{lng_field}/{lat_field}",
+            "repaired": repaired_count,
+            "referenced": referenced_count,
+            "unlocated": unlocated_count,
+            "unlocatedRecords": unlocated_records,
+            "suspicious": suspicious_count,
         }

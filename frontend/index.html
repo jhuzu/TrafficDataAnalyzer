@@ -135,9 +135,11 @@
           <h2>事故標記地圖</h2>
           <div class="map-controls">
             <label><input id="mapDensityToggle" type="checkbox"> 顯示密度色階</label>
+            <label class="density-threshold">紅色門檻：<input id="mapDensityThreshold" type="number" min="1" value="5" inputmode="numeric"> 件以上（超過）</label>
             <span id="mapInfo" class="muted"></span>
           </div>
           <div id="accidentMap" class="map-container"></div>
+          <div id="mapUnlocated" class="map-unlocated hidden"></div>
         </section>
 
         <!-- 固定摘要面板 -->

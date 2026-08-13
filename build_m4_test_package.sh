@@ -2,7 +2,7 @@
 
 set -euo pipefail
 SCRIPT_DIR="${0:A:h}"
-DEFAULT_NAME="TrafficDataAnalyzer_M4_測試版_20260811"
+DEFAULT_NAME="TrafficDataAnalyzer_Mac修正v1.1_20260813"
 DESTINATION="${1:-$SCRIPT_DIR/generated/$DEFAULT_NAME}"
 ARCHIVE_PATH="${DESTINATION}.zip"
 

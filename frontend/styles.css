@@ -458,6 +458,11 @@ canvas {
   color: var(--ink);
 }
 
+.map-controls .density-threshold input {
+  width: 58px;
+  padding: 3px 5px;
+}
+
 .map-controls .muted {
   margin-left: auto;
   font-size: 12px;
@@ -476,6 +481,21 @@ canvas {
   color: var(--blue);
   font-weight: 700;
   font-size: 15px;
+}
+
+.map-unlocated {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-left: 3px solid #d97706;
+  background: #fffbeb;
+  color: #78350f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.map-unlocated ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
 }
 
 @media print {
