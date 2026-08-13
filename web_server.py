@@ -119,13 +119,14 @@ def recover_major_violations(uploads) -> object:
         shutil.rmtree(tempdir, ignore_errors=True)
 
 
-def recover_performance_targets(upload):
+def recover_performance_targets(upload, period: str):
+    """Load performance targets using an explicit, validated reporting period."""
     tempdir = Path(tempfile.mkdtemp(prefix="major_target_web_"))
     try:
         incoming = tempdir / f"target{Path(upload.filename).suffix.lower()}"
         with incoming.open("wb") as file:
             shutil.copyfileobj(upload.file, file)
-        return replace(load_performance_targets(incoming, period="week" if upload.period == "week" else "month"), source_name=upload.filename)
+        return replace(load_performance_targets(incoming, period=period), source_name=upload.filename)
     finally:
         shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -214,114 +215,121 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(content)
 
+    def handle_accident_load(self):
+        dataset = recover(parse_upload(self))
+        token = SESSIONS.create({"dataset": dataset, "service": AccidentAnalysisService(dataset)})
+        self.send_json(200, {"token": token, "fields": list(dataset.headers), "rows": len(dataset.rows),
+                             "sourceType": dataset.source_type, "rowMode": dataset.row_mode,
+                             "sheetName": dataset.sheet_name, "warnings": list(dataset.warnings)})
+
+    def handle_major_load(self):
+        dataset = recover_major_violations(parse_uploads(self, field_names={"files", "file"}))
+        if not dataset.records:
+            details = " ".join(warning for source in dataset.sources for warning in source.warnings)
+            raise ValueError(f"沒有成功載入任何重大違規資料。{details}")
+        token = SESSIONS.create({"module": "major-violation", "dataset": dataset,
+                                 "service": MajorViolationAnalysisService(dataset)})
+        start, end = dataset.date_range
+        self.send_json(200, {"token": token, "rows": dataset.raw_row_count, "totalCount": dataset.total_count,
+                             "dateRange": {"start": start, "end": end},
+                             "deduplicationStatus": dataset.deduplication_status, "warnings": list(dataset.warnings),
+                             "sources": [{"fileName": source.file_name, "status": source.status,
+                                          "rows": source.raw_row_count, "sheetName": source.sheet_name,
+                                          "warnings": list(source.warnings)} for source in dataset.sources]})
+
+    def handle_performance_target_load(self):
+        uploads = parse_uploads(self, field_names={"target"})
+        token, session = performance_session(self.headers.get("X-Performance-Token", ""))
+        period = self.headers.get("X-Performance-Period", "month")
+        if period not in {"month", "week"}:
+            period = "month"
+        targets = recover_performance_targets(uploads[0], period)
+        session["performance_targets"] = targets
+        self.send_json(200, {"token": token, "sourceName": targets.source_name,
+                             "units": list(targets.units), "warnings": list(targets.warnings)})
+
+    def handle_performance_statistics_load(self):
+        uploads = parse_uploads(self, field_names={"statistics", "statistic"})
+        token, session = performance_session(self.headers.get("X-Performance-Token", ""))
+        statistics = recover_performance_statistics(uploads)
+        session["performance_statistics"] = statistics
+        self.send_json(200, {"token": token, "sourceNames": list(statistics.source_names),
+                             "availableKeys": list(statistics.available_keys), "warnings": list(statistics.warnings)})
+
+    def handle_clear(self, body, _session):
+        SESSIONS.delete(str(body.get("token", "")))
+        self.send_json(200, {"cleared": True})
+
+    def handle_major_analysis(self, body, session):
+        if session.get("module") != "major-violation":
+            raise ValueError("此 Session 不屬於重大違規分析，請重新載入資料。")
+        self.send_json(200, session["service"].analyze(body))
+
+    def handle_performance(self, body, session):
+        targets = session.get("performance_targets")
+        if targets is None:
+            raise ValueError("請先提供「績效目標值」Excel。")
+        dataset = session.get("dataset") if session.get("module") == "major-violation" else None
+        self.send_json(200, build_performance(dataset, targets, body.get("startDate"), body.get("endDate"),
+                                              session.get("performance_statistics"), body.get("selectedKeys")))
+
+    def handle_presentation(self, body, session):
+        dataset = session.get("dataset")
+        if dataset is None:
+            raise ValueError("此 Session 沒有事故分析資料。")
+        generated = PRESENTATIONS.generate(dataset, variant_key=body.get("variant", "modern"),
+                                           period=body.get("period", "115年1月1日至8月31日"))
+        self.send_file(200, generated.content, generated.content_type, generated.filename)
+
+    def handle_map_points(self, body, session):
+        service = session.get("service")
+        if service is None:
+            raise ValueError("此 Session 沒有事故分析資料。")
+        self.send_json(200, service.map_points(body))
+
+    def handle_raw(self, body, session):
+        service = session.get("service")
+        if service is None:
+            raise ValueError("此 Session 沒有事故分析資料。")
+        self.send_json(200, service.raw_page(body))
+
+    def handle_accident_analysis(self, body, session):
+        service = session.get("service")
+        if service is None:
+            raise ValueError("此 Session 沒有可分析資料。")
+        self.send_json(200, service.analyze(body))
+
     def do_POST(self):
         try:
-            if self.path == "/load":
-                dataset = recover(parse_upload(self))
-                token = SESSIONS.create({
-                    "dataset": dataset,
-                    "service": AccidentAnalysisService(dataset),
-                })
-                return self.send_json(200, {
-                    "token": token,
-                    "fields": list(dataset.headers),
-                    "rows": len(dataset.rows),
-                    "sourceType": dataset.source_type,
-                    "rowMode": dataset.row_mode,
-                    "sheetName": dataset.sheet_name,
-                    "warnings": list(dataset.warnings),
-                })
+            upload_routes = {
+                "/load": self.handle_accident_load,
+                "/major-violation/load": self.handle_major_load,
+                "/major-violation/performance-target": self.handle_performance_target_load,
+                "/major-violation/performance-statistics": self.handle_performance_statistics_load,
+            }
+            if route := upload_routes.get(self.path):
+                return route()
 
-            if self.path == "/major-violation/load":
-                dataset = recover_major_violations(parse_uploads(self, field_names={"files", "file"}))
-                if not dataset.records:
-                    details = " ".join(
-                        warning for source in dataset.sources for warning in source.warnings
-                    )
-                    raise ValueError(f"沒有成功載入任何重大違規資料。{details}")
-                token = SESSIONS.create({
-                    "module": "major-violation",
-                    "dataset": dataset,
-                    "service": MajorViolationAnalysisService(dataset),
-                })
-                start, end = dataset.date_range
-                return self.send_json(200, {
-                    "token": token,
-                    "rows": dataset.raw_row_count,
-                    "totalCount": dataset.total_count,
-                    "dateRange": {"start": start, "end": end},
-                    "deduplicationStatus": dataset.deduplication_status,
-                    "warnings": list(dataset.warnings),
-                    "sources": [{
-                        "fileName": source.file_name,
-                        "status": source.status,
-                        "rows": source.raw_row_count,
-                        "sheetName": source.sheet_name,
-                        "warnings": list(source.warnings),
-                    } for source in dataset.sources],
-                })
-            if self.path == "/major-violation/performance-target":
-                uploads = parse_uploads(self, field_names={"target"})
-                token, session = performance_session(self.headers.get("X-Performance-Token", ""))
-                uploads[0].period = self.headers.get("X-Performance-Period", "month")
-                targets = recover_performance_targets(uploads[0])
-                session["performance_targets"] = targets
-                return self.send_json(200, {"token": token, "sourceName": targets.source_name, "units": list(targets.units), "warnings": list(targets.warnings)})
-            if self.path == "/major-violation/performance-statistics":
-                uploads = parse_uploads(self, field_names={"statistics", "statistic"})
-                token, session = performance_session(self.headers.get("X-Performance-Token", ""))
-                statistics = recover_performance_statistics(uploads)
-                session["performance_statistics"] = statistics
-                return self.send_json(200, {"token": token, "sourceNames": list(statistics.source_names), "availableKeys": list(statistics.available_keys), "warnings": list(statistics.warnings)})
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
-            token = str(body.get("token", ""))
             if self.path == "/clear":
-                SESSIONS.delete(token)
-                return self.send_json(200, {"cleared": True})
-
+                return self.handle_clear(body, None)
+            token = str(body.get("token", ""))
             session = SESSIONS.get(token)
             if not session:
                 raise ValueError("資料已失效，請重新載入檔案。")
-            dataset = session.get("dataset")
-            service = session.get("service")
-
-            if self.path == "/major-violation/analyze":
-                if session.get("module") != "major-violation":
-                    raise ValueError("此 Session 不屬於重大違規分析，請重新載入資料。")
-                return self.send_json(200, service.analyze(body))
-
-            if self.path == "/major-violation/performance":
-                targets = session.get("performance_targets")
-                if targets is None:
-                    raise ValueError("請先提供「績效目標值」Excel。")
-                source_dataset = dataset if session.get("module") == "major-violation" else None
-                return self.send_json(200, build_performance(source_dataset, targets, body.get("startDate"), body.get("endDate"), session.get("performance_statistics"), body.get("selectedKeys")))
-
-            if self.path == "/generate-pptx":
-                if dataset is None:
-                    raise ValueError("此 Session 沒有事故分析資料。")
-                generated = PRESENTATIONS.generate(
-                    dataset,
-                    variant_key=body.get("variant", "modern"),
-                    period=body.get("period", "115年1月1日至8月31日"),
-                )
-                return self.send_file(
-                    200, generated.content, generated.content_type, generated.filename
-                )
-
-            if self.path == "/map-points":
-                if service is None:
-                    raise ValueError("此 Session 沒有事故分析資料。")
-                return self.send_json(200, service.map_points(body))
-
-            if self.path == "/raw":
-                if service is None:
-                    raise ValueError("此 Session 沒有事故分析資料。")
-                return self.send_json(200, service.raw_page(body))
-
-            if service is None:
-                raise ValueError("此 Session 沒有可分析資料。")
-            return self.send_json(200, service.analyze(body))
+            json_routes = {
+                "/major-violation/analyze": self.handle_major_analysis,
+                "/major-violation/performance": self.handle_performance,
+                "/generate-pptx": self.handle_presentation,
+                "/map-points": self.handle_map_points,
+                "/raw": self.handle_raw,
+                "/analyze": self.handle_accident_analysis,
+            }
+            route = json_routes.get(self.path)
+            if route is None:
+                self.send_error(404)
+                return
+            return route(body, session)
         except (ValueError, KeyError, json.JSONDecodeError, IndexError) as exc:
             LOGGER.warning("Request rejected on %s: %s", self.path, exc)
             self.send_json(400, {"error": str(exc)})

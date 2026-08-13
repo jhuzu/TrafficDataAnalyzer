@@ -188,6 +188,31 @@ class AccidentAnalysisService:
             previous = value
         return output
 
+    @staticmethod
+    def _prior_year(day: date) -> date:
+        """Keep a same-period comparison valid when the prior year is not leap."""
+        try:
+            return day.replace(year=day.year - 1)
+        except ValueError:
+            return day.replace(year=day.year - 1, day=28)
+
+    def _year_comparison(self, options: dict[str, Any], total: int | float) -> dict[str, Any] | None:
+        start_date, end_date = self._date_range(options)
+        if not start_date or not end_date:
+            return None
+        previous_options = dict(options)
+        previous_start = self._prior_year(start_date)
+        previous_end = self._prior_year(end_date)
+        previous_options.update(startDate=previous_start.isoformat(), endDate=previous_end.isoformat())
+        previous_total = _clean_number(self.dataset.total(self._filter_rows(previous_options)))
+        difference = _clean_number(float(total) - float(previous_total))
+        return {
+            "previousPeriod": f"{previous_start.isoformat()} 至 {previous_end.isoformat()}",
+            "previousTotal": previous_total,
+            "difference": difference,
+            "rate": None if previous_total == 0 else (float(total) - float(previous_total)) / float(previous_total),
+        }
+
     def analyze(self, options: dict[str, Any]) -> dict[str, Any]:
         rows = self._filter_rows(options)
         if self.dataset.position("件數") is None:
@@ -254,6 +279,7 @@ class AccidentAnalysisService:
             "age": age,
             "vehicle": vehicle,
             "trend": trend,
+            "yearComparison": self._year_comparison(options, total),
         }
 
     def raw_page(self, options: dict[str, Any]) -> dict[str, Any]:

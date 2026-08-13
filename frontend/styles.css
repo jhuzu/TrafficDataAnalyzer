@@ -233,6 +233,17 @@ button {
   margin-top: 12px;
 }
 
+.compact-actions { margin-top: 0; margin-bottom: 10px; }
+
+.year-comparison {
+  min-height: 42px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--blue);
+  background: #f8fbff;
+  color: var(--navy);
+}
+
 .status {
   color: var(--blue);
   min-height: 20px;
@@ -465,4 +476,15 @@ canvas {
   color: var(--blue);
   font-weight: 700;
   font-size: 15px;
+}
+
+@media print {
+  body { background: #fff; }
+  .sidebar, .analysis-tabs, .actions, .file-picker, .map-controls { display: none !important; }
+  .app-shell { display: block; }
+  .content { padding: 0; }
+  .card { border: 0; break-inside: avoid; page-break-inside: avoid; }
+  .table-wrap { overflow: visible; }
+  .performance-table { font-size: 10px; width: 100%; }
+  .performance-table tr { break-inside: avoid; page-break-inside: avoid; }
 }

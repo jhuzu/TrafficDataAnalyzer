@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 .venv-export-test/
+.venv-clean-test/
 .DS_Store
 *.inspect.ndjson
 generated/

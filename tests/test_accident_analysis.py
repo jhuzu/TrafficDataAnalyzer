@@ -98,6 +98,23 @@ class AccidentAnalysisServiceTests(unittest.TestCase):
         self.assertIn("2026-02-01至2026-02-10", result["rule"])
         self.assertEqual(self.service.map_points(options)["total"], 1)
 
+    def test_complete_date_range_includes_previous_year_comparison(self):
+        source = dataset().to_source_dict()
+        source["rows"] = source["rows"] + [[
+            "A2", 114, 2, 5, "0800", "文化路", "", "未依規定讓車", 30,
+            "機車", "", "", "", 4, 25.01, 121.45,
+        ]]
+        service = AccidentAnalysisService(transform_accident_source(source))
+        result = service.analyze({
+            "pattern": "all", "startDate": "2026-02-01", "endDate": "2026-02-28",
+        })
+        self.assertEqual(result["yearComparison"], {
+            "previousPeriod": "2025-02-01 至 2025-02-28",
+            "previousTotal": 4,
+            "difference": 0,
+            "rate": 0.0,
+        })
+
     def test_invalid_date_range_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "起日不可"):
             self.service.analyze({"startDate": "2026-03-01", "endDate": "2026-02-01"})

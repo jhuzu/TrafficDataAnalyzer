@@ -109,6 +109,9 @@
         <!-- 統計表格面板 -->
         <section id="panel-table" class="analysis-panel card">
           <h2 id="analysisTitle">統計表格</h2>
+          <div class="actions compact-actions">
+            <button id="analysisExportButton" class="secondary">匯出 CSV</button>
+          </div>
           <div id="analysisTable" class="table-wrap"></div>
         </section>
 
@@ -123,6 +126,7 @@
         <!-- 趨勢分析面板 -->
         <section id="panel-trend" class="analysis-panel card hidden">
           <h2>趨勢分析</h2>
+          <p id="yearComparison" class="year-comparison"><span class="muted">選擇完整起訖日後，顯示去年同期比較。</span></p>
           <div id="trendTable" class="table-wrap"></div>
         </section>
 
@@ -130,6 +134,7 @@
         <section id="panel-map" class="analysis-panel card hidden">
           <h2>事故標記地圖</h2>
           <div class="map-controls">
+            <label><input id="mapDensityToggle" type="checkbox"> 顯示密度色階</label>
             <span id="mapInfo" class="muted"></span>
           </div>
           <div id="accidentMap" class="map-container"></div>
