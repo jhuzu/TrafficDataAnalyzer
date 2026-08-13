@@ -5,6 +5,7 @@ import json
 import logging
 import re
 import shutil
+import sys
 import tempfile
 from dataclasses import replace
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,7 +25,7 @@ from modules.major_violation import (
     load_performance_statistics, load_performance_targets, load_violation_workbooks,
 )
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 FRONTEND_ROOT = ROOT / "frontend"
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
 SUPPORTED_UPLOAD_EXTENSIONS = {".xlsx", ".xlsm", ".xls"}

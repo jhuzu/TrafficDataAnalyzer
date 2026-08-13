@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import platform
 from io import BytesIO
 from pathlib import Path
 from typing import Iterable
@@ -18,10 +19,18 @@ THEMES = {
     "modern": {"accent": "1F4E78", "accent2": "ED7D31", "pale": "EAF2F8", "name": "新式版本"},
     "traditional": {"accent": "305496", "accent2": "C00000", "pale": "F3F6FB", "name": "傳統版本"},
 }
+TEXT_FONT_NAME = "Microsoft JhengHei" if platform.system() == "Windows" else "PingFang TC"
 
 
 def _font(size: int, bold: bool = False):
-    for candidate in ("/System/Library/Fonts/PingFang.ttc", "/System/Library/Fonts/STHeiti Light.ttc"):
+    candidates = (
+        ("C:/Windows/Fonts/msjhbd.ttc", "C:/Windows/Fonts/msjh.ttc")
+        if platform.system() == "Windows" and bold
+        else ("C:/Windows/Fonts/msjh.ttc", "C:/Windows/Fonts/msjhbd.ttc")
+        if platform.system() == "Windows"
+        else ("/System/Library/Fonts/PingFang.ttc", "/System/Library/Fonts/STHeiti Light.ttc")
+    )
+    for candidate in candidates:
         if Path(candidate).is_file():
             return ImageFont.truetype(candidate, size, index=0)
     return ImageFont.load_default()
@@ -69,7 +78,7 @@ def _text(slide, text, left, top, width, height, size=18, bold=False, color="263
     frame.clear(); frame.word_wrap = True
     paragraph = frame.paragraphs[0]
     paragraph.text = str(text)
-    paragraph.font.name = "PingFang TC"
+    paragraph.font.name = TEXT_FONT_NAME
     paragraph.font.size = Pt(size)
     paragraph.font.bold = bold
     paragraph.font.color.rgb = _rgb(color)

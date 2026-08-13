@@ -34,6 +34,10 @@
 
 執行 `.venv/bin/python -m unittest discover -v` 檢查核心與匯出功能。前端 JavaScript 為瀏覽器原生模組，無需 Node.js 建置工具。
 
+## Windows
+
+Windows 10／11 請見 `Windows使用說明.txt`。首次執行 `安裝Windows依賴.bat`，之後以 `啟動Windows版.bat` 開啟工具；如需交付不含 Python 環境的版本，請在 Windows 電腦執行 `打包Windows免安裝版.bat`。
+
 ## 目錄與模組化
 
 頂層 sidebar 不直接寫死功能，改由 `frontend/modules.js` 的模組註冊表產生。未來新增「人口資料分析」或其他資料模組時，只需新增模組設定與對應 view，再逐步抽離該模組的分析邏輯。
