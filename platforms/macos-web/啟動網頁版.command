@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -e
-SCRIPT_DIR="${0:A:h}"
-PYTHON_BIN="${PYTHON_BIN:-$SCRIPT_DIR/.venv/bin/python}"
+PROJECT_ROOT="${0:A:h:h:h}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
 if [[ ! -x "$PYTHON_BIN" ]]; then
   PYTHON_BIN="$(command -v python3 2>/dev/null || true)"
 fi
@@ -20,4 +20,4 @@ if [[ -n "$OLD_LOCAL_PID" ]]; then
   sleep 0.3
 fi
 open "http://127.0.0.1:8765"
-exec "$PYTHON_BIN" "$SCRIPT_DIR/web_server.py"
+exec "$PYTHON_BIN" "$PROJECT_ROOT/web_server.py"

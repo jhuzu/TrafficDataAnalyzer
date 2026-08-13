@@ -11,6 +11,8 @@ from pathlib import Path
 
 if getattr(sys, "frozen", False):
     sys.path.insert(0, str(Path(sys._MEIPASS)))
+else:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from web_server import Handler
 

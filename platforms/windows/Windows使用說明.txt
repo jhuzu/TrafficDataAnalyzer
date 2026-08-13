@@ -6,17 +6,17 @@
 1. 安裝 Python 3.11 或更新版本：https://www.python.org/downloads/windows/
 2. 安裝時請勾選「Add Python to PATH」。
 3. 解壓整個專案資料夾。
-4. 連按兩下「安裝Windows依賴.bat」，等待安裝完成。
-5. 連按兩下「啟動Windows版.bat」。瀏覽器會自動開啟工具。
+4. 開啟 `platforms/windows/`，連按兩下「安裝Windows依賴.bat」，等待安裝完成。
+5. 在同一資料夾連按兩下「啟動Windows版.bat」。瀏覽器會自動開啟工具。
 
 平常使用：
-- 連按兩下「啟動Windows版.bat」。
+- 連按兩下 `platforms/windows/啟動Windows版.bat`。
 - 資料只在本機瀏覽器與 http://127.0.0.1:8765 間處理。
 - 事故地圖需要網路下載 OpenStreetMap 底圖。
 
 免安裝 EXE 封裝（供技術人員在 Windows 上製作）：
 1. 完成上述首次安裝。
-2. 連按兩下「打包Windows免安裝版.bat」。
+2. 連按兩下 `platforms/windows/打包Windows免安裝版.bat`。
 3. 在 generated\TrafficDataAnalyzer_Windows_免安裝版.zip 取得可交付壓縮檔。
 
 注意：

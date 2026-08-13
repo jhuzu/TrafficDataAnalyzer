@@ -1,6 +1,7 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+set "PROJECT_ROOT=%~dp0..\.."
+cd /d "%PROJECT_ROOT%"
 
 where py >nul 2>nul && (set "PYTHON=py -3") || (set "PYTHON=python")
 %PYTHON% --version >nul 2>nul || (

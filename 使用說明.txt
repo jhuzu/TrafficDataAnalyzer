@@ -1,7 +1,7 @@
 交通業務資料分析工具
 
 網頁版使用方式
-1. 連按兩下「啟動網頁版.command」。
+1. 連按兩下「platforms/macos-web/啟動網頁版.command」。
 2. 瀏覽器會開啟 http://127.0.0.1:8765。
 3. 選取 .xlsx 或 .xlsm 檔案並按「載入檔案」。系統會自動比較一般工作表與 Pivot Cache，使用欄位較完整的資料來源。
 4. 載入後使用「事故資料分析」入口；投影片生成位於同一頁的 tablist。
@@ -17,12 +17,12 @@
 5. 地圖框位先保留模板預留圖框，後續可替換離線圖資。
 
 使用方式
-1. 先依 README 建立 `.venv` 並安裝 `requirements.txt`，再將 `TrafficDataAnalyzer.command`、`extract_pivot_cache.py`、`build_xlsx.py` 放在同一個專案中。
-2. 連按兩下 `TrafficDataAnalyzer.command`。
+1. 先依 README 建立 `.venv` 並安裝 `requirements.txt`。
+2. 連按兩下 `platforms/macos-web/TrafficDataAnalyzer.command`。
 3. 在跳出的視窗選取含樞紐分析表的 .xlsm 檔。
 4. 工具完成後，會在原檔同一個資料夾產生「原檔名_完整自動分析.xlsx」。
 
-也可以直接把 .xlsm 檔拖曳到 `TrafficDataAnalyzer.command` 上。
+也可以直接把 .xlsm 檔拖曳到 `platforms/macos-web/TrafficDataAnalyzer.command` 上。
 
 網頁版資料讀取
 - 支援一般 `.xlsx`、一般 `.xlsm` 與含 Pivot Cache 的 `.xlsm`。

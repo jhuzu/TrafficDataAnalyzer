@@ -18,8 +18,8 @@
 先建立虛擬環境並安裝公開 Python 套件：
 
 ```bash
-./安裝Python依賴.command
-./啟動網頁版.command
+./platforms/macos-web/安裝Python依賴.command
+./platforms/macos-web/啟動網頁版.command
 ```
 
 或執行：
@@ -36,13 +36,15 @@
 
 ## Windows
 
-Windows 10／11 請見 `Windows使用說明.txt`。首次執行 `安裝Windows依賴.bat`，之後以 `啟動Windows版.bat` 開啟工具；如需交付不含 Python 環境的版本，請在 Windows 電腦執行 `打包Windows免安裝版.bat`。
+Windows 10／11 請見 `platforms/windows/Windows使用說明.txt`。首次執行 `platforms/windows/安裝Windows依賴.bat`，之後以 `platforms/windows/啟動Windows版.bat` 開啟工具；如需交付不含 Python 環境的版本，請在 Windows 電腦執行 `platforms/windows/打包Windows免安裝版.bat`。
 
 ## 目錄與模組化
 
 頂層 sidebar 不直接寫死功能，改由 `frontend/modules.js` 的模組註冊表產生。未來新增「人口資料分析」或其他資料模組時，只需新增模組設定與對應 view，再逐步抽離該模組的分析邏輯。
 
 詳細說明請見 [ARCHITECTURE.md](ARCHITECTURE.md)。事故專用工具與模板位於 `modules/accident_analysis/`；重大違規模組位於 `modules/major_violation/`，可在網頁一次選取多份 Excel。跨檔資料目前保留原始列、不自動去重。
+
+平台啟動器與打包工具統一放在 `platforms/`：`macos-web/` 為目前的 macOS 網頁版、`windows/` 為 Windows 版、`macos-desktop/` 預留給後續專用視窗版；分析核心維持共用，不隨平台複製。
 
 ## 注意事項
 

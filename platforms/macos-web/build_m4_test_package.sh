@@ -1,9 +1,9 @@
 #!/bin/zsh
 
 set -euo pipefail
-SCRIPT_DIR="${0:A:h}"
+PROJECT_ROOT="${0:A:h:h:h}"
 DEFAULT_NAME="TrafficDataAnalyzer_Mac修正v1.1_20260813"
-DESTINATION="${1:-$SCRIPT_DIR/generated/$DEFAULT_NAME}"
+DESTINATION="${1:-$PROJECT_ROOT/generated/$DEFAULT_NAME}"
 ARCHIVE_PATH="${DESTINATION}.zip"
 
 if [[ -e "$DESTINATION" || -e "$ARCHIVE_PATH" ]]; then
@@ -21,9 +21,9 @@ rsync -a \
   --exclude='__pycache__/' \
   --exclude='*.pyc' \
   --exclude='.DS_Store' \
-  "$SCRIPT_DIR/" "$DESTINATION/TrafficDataAnalyzer/"
+  "$PROJECT_ROOT/" "$DESTINATION/TrafficDataAnalyzer/"
 
-chmod +x "$DESTINATION/TrafficDataAnalyzer/"*.command
+chmod +x "$DESTINATION/TrafficDataAnalyzer/platforms/macos-web/"*.command
 ditto -c -k --sequesterRsrc --keepParent "$DESTINATION/TrafficDataAnalyzer" "$ARCHIVE_PATH"
 
 echo "資料夾：$DESTINATION/TrafficDataAnalyzer"

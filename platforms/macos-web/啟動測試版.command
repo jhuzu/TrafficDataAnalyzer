@@ -1,8 +1,8 @@
 #!/bin/zsh
 
 set -e
-SCRIPT_DIR="${0:A:h}"
-PYTHON_BIN="${PYTHON_BIN:-$SCRIPT_DIR/.venv/bin/python}"
+PROJECT_ROOT="${0:A:h:h:h}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   PYTHON_BIN="$(command -v python3 2>/dev/null || true)"
@@ -21,6 +21,6 @@ if lsof -ti tcp:8765 >/dev/null 2>&1; then
   exit 1
 fi
 
-cd "$SCRIPT_DIR"
+cd "$PROJECT_ROOT"
 open "http://127.0.0.1:8765"
 exec "$PYTHON_BIN" web_server.py

@@ -1,16 +1,17 @@
 @echo off
 setlocal
-cd /d "%~dp0"
+set "PROJECT_ROOT=%~dp0..\.."
+cd /d "%PROJECT_ROOT%"
 
 if not exist ".venv\Scripts\python.exe" (
   echo [錯誤] 尚未安裝必要套件，現在將開啟安裝程式。
-  call "安裝Windows依賴.bat"
+  call "%~dp0安裝Windows依賴.bat"
   if errorlevel 1 exit /b 1
 )
 
 .venv\Scripts\python.exe -c "import openpyxl, pptx, PIL" >nul 2>nul || (
   echo [錯誤] 套件不完整，現在將重新安裝。
-  call "安裝Windows依賴.bat"
+  call "%~dp0安裝Windows依賴.bat"
   if errorlevel 1 exit /b 1
 )
 

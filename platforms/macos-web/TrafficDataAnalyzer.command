@@ -1,8 +1,8 @@
 #!/bin/zsh
 
 set -e
-SCRIPT_DIR="${0:A:h}"
-PYTHON_BIN="${PYTHON_BIN:-$SCRIPT_DIR/.venv/bin/python}"
+PROJECT_ROOT="${0:A:h:h:h}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
 if [[ ! -x "$PYTHON_BIN" ]]; then
   PYTHON_BIN="$(command -v python3 2>/dev/null || true)"
 fi
@@ -31,7 +31,7 @@ if [[ -e "$OUTPUT" ]]; then
   OUTPUT="${BASE}_$(date +%Y%m%d-%H%M%S).xlsx"
 fi
 
-"$PYTHON_BIN" "$SCRIPT_DIR/extract_pivot_cache.py" "$INPUT" "$TEMP_JSON"
-"$PYTHON_BIN" "$SCRIPT_DIR/build_xlsx.py" "$TEMP_JSON" "$OUTPUT"
+"$PYTHON_BIN" "$PROJECT_ROOT/extract_pivot_cache.py" "$INPUT" "$TEMP_JSON"
+"$PYTHON_BIN" "$PROJECT_ROOT/build_xlsx.py" "$TEMP_JSON" "$OUTPUT"
 osascript -e "display notification \"$(basename "$OUTPUT")\" with title \"完整分析已完成\""
 echo "完成：$OUTPUT"
