@@ -1,19 +1,66 @@
 import { LatestRequest, isAbort, jsonOptions } from "./api.js";
 
-export function createAccidentMap({ container, info, unlocated, getToken, getOptions, getDensityEnabled, getDensityThreshold, escapeHtml }) {
+const BASEMAP_STORAGE_KEY = "traffic-analyzer-basemap";
+const BASEMAPS = {
+  positron: {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    options: {
+      maxZoom: 20,
+      subdomains: "abcd",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+  },
+  osm: {
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    options: {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+  },
+  "positron-nolabels": {
+    url: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+    options: {
+      maxZoom: 20,
+      subdomains: "abcd",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    },
+  },
+};
+
+export function createAccidentMap({ container, info, unlocated, baseLayerSelect, getToken, getOptions, getDensityEnabled, getDensityThreshold, escapeHtml }) {
   const request = new LatestRequest();
   let map = null;
+  let baseLayer = null;
   let markerLayer = null;
   let densityLayer = null;
   let currentMarkers = [];
 
+  function storedBaseLayer() {
+    try {
+      const key = localStorage.getItem(BASEMAP_STORAGE_KEY);
+      return BASEMAPS[key] ? key : "positron";
+    } catch (_) {
+      return "positron";
+    }
+  }
+
+  function setBaseLayer(key) {
+    const selected = BASEMAPS[key] ? key : "positron";
+    if (baseLayerSelect) baseLayerSelect.value = selected;
+    try { localStorage.setItem(BASEMAP_STORAGE_KEY, selected); } catch (_) { /* optional preference */ }
+    if (!map) return;
+    if (baseLayer) map.removeLayer(baseLayer);
+    const config = BASEMAPS[selected];
+    baseLayer = L.tileLayer(config.url, config.options).addTo(map);
+    baseLayer.bringToBack();
+  }
+
+  if (baseLayerSelect) baseLayerSelect.value = storedBaseLayer();
+
   function initialize() {
     if (map || !container) return;
     map = L.map(container, { center: [25.0118, 121.459], zoom: 14, zoomControl: true });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 18,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
-    }).addTo(map);
+    setBaseLayer(baseLayerSelect?.value || storedBaseLayer());
     markerLayer = L.layerGroup().addTo(map);
     densityLayer = L.layerGroup().addTo(map);
     map.on("zoomend moveend", renderMarkers);
@@ -106,6 +153,7 @@ export function createAccidentMap({ container, info, unlocated, getToken, getOpt
 
   return {
     load,
+    setBaseLayer,
     invalidate() {
       map?.invalidateSize();
     },

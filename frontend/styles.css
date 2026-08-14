@@ -443,6 +443,7 @@ canvas {
 
 .map-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   margin-bottom: 10px;
@@ -472,6 +473,11 @@ canvas {
   cursor: pointer;
   font-weight: 400;
   color: var(--ink);
+}
+
+.map-controls .map-basemap-control select {
+  min-width: 132px;
+  padding: 4px 28px 4px 7px;
 }
 
 .map-controls .density-threshold input {

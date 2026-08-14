@@ -11,7 +11,7 @@ export function initAccident() {
   const analysisRequest = new LatestRequest();
   const chart = createAnalysisChart($("analysisChart"));
   const accidentMap = createAccidentMap({
-    container: $("accidentMap"), info: $("mapInfo"), unlocated: $("mapUnlocated"), getToken: () => state.token,
+    container: $("accidentMap"), info: $("mapInfo"), unlocated: $("mapUnlocated"), baseLayerSelect: $("mapBasemap"), getToken: () => state.token,
     getOptions: () => ({ pattern: $("pattern").value, startDate: $("accidentStartDate").value || undefined, endDate: $("accidentEndDate").value || undefined }),
     getDensityEnabled: () => $("mapDensityToggle").checked,
     getDensityThreshold: () => Math.max(1, Number($("mapDensityThreshold").value) || 5), escapeHtml: esc,
@@ -83,7 +83,7 @@ export function initAccident() {
     state.token = ""; state.latest = null; $("fileInput").value = ""; setStatus("已清除資料，請重新載入 Excel。"); $("slideStatus").textContent = ""; $("metrics").innerHTML = ""; $("analysisTable").innerHTML = "<p>尚未載入資料</p>"; $("trendTable").innerHTML = "<p>尚未載入資料</p>"; $("yearComparison").innerHTML = '<span class="muted">選擇完整起訖日後，顯示去年同期比較。</span>'; $("narrative").textContent = ""; chart.clear(); accidentMap.clear(); showPanel("table");
   }
 
-  $("loadButton").onclick = loadData; $("clearButton").onclick = clearData; $("analyzeButton").onclick = analyze; $("pattern").onchange = analyze; $("accidentStartDate").onchange = analyze; $("accidentEndDate").onchange = analyze; $("period").onchange = analyze; $("top").onchange = analyze; $("basicMetric").onchange = () => state.latest && render(state.latest); $("analysisExportButton").onclick = exportTable; $("mapDensityToggle").onchange = () => accidentMap.load(); $("mapDensityThreshold").onchange = () => accidentMap.render();
+  $("loadButton").onclick = loadData; $("clearButton").onclick = clearData; $("analyzeButton").onclick = analyze; $("pattern").onchange = analyze; $("accidentStartDate").onchange = analyze; $("accidentEndDate").onchange = analyze; $("period").onchange = analyze; $("top").onchange = analyze; $("basicMetric").onchange = () => state.latest && render(state.latest); $("analysisExportButton").onclick = exportTable; $("mapBasemap").onchange = () => accidentMap.setBaseLayer($("mapBasemap").value); $("mapDensityToggle").onchange = () => accidentMap.load(); $("mapDensityThreshold").onchange = () => accidentMap.render();
   $("generateModernSlidesButton").onclick = () => slides.generate("modern", $("generateModernSlidesButton")); $("generateTraditionalSlidesButton").onclick = () => slides.generate("traditional", $("generateTraditionalSlidesButton")); $("copyButton").onclick = () => navigator.clipboard?.writeText($("narrative").textContent).then(() => setStatus("摘要已複製。"));
   document.querySelectorAll(".analysis-tab").forEach((button) => { button.onclick = () => showPanel(button.dataset.analysis); });
 }

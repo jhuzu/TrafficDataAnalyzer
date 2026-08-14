@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>交通事故分析工具</title>
+  <title>交通組資料分析簡易工具</title>
   <link rel="stylesheet" href="/lib/leaflet.css">
   <link rel="stylesheet" href="/styles.css">
 </head>
@@ -13,7 +13,7 @@
   <div class="app-shell">
     <!-- 側邊導覽列 -->
     <aside class="sidebar">
-      <div class="brand">交通組資料分析工具</div>
+      <div class="brand">交通組資料分析簡易工具</div>
       <nav id="moduleNav" class="nav" aria-label="主要功能"></nav>
     </aside>
 
@@ -133,10 +133,18 @@
         <!-- 事故地圖面板 -->
         <section id="panel-map" class="analysis-panel card hidden">
           <h2>事故標記地圖 <span class="version-badge">離線道路定位 v1.1</span></h2>
-          <p class="muted map-version-note">優先使用內建板橋道路與路口資料庫校正事故座標；底圖仍為 OpenStreetMap。</p>
+          <p class="muted map-version-note">優先使用內建板橋道路與路口資料庫校正事故座標；可依閱讀需求切換線上底圖。</p>
           <div class="map-controls">
+            <label class="map-basemap-control">底圖：
+              <select id="mapBasemap" aria-label="選擇地圖底圖">
+                <option value="positron">簡潔底圖</option>
+                <option value="osm">標準 OSM</option>
+                <option value="positron-nolabels">簡潔無標籤</option>
+              </select>
+            </label>
             <label><input id="mapDensityToggle" type="checkbox"> 顯示密度色階</label>
-            <label class="density-threshold">紅色門檻：<input id="mapDensityThreshold" type="number" min="1" value="5" inputmode="numeric"> 件以上（超過）</label>
+            <label class="density-threshold">紅色門檻：<input id="mapDensityThreshold" type="number" min="1" value="5"
+                inputmode="numeric"> 件以上（超過）</label>
             <span id="mapInfo" class="muted"></span>
           </div>
           <div id="accidentMap" class="map-container"></div>

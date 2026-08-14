@@ -6,10 +6,20 @@ from zipfile import ZipFile
 
 from openpyxl import load_workbook
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx.util import Inches
 
 from build_xlsx import build_workbook
 from core.session_store import InMemorySessionStore
 from modules.accident_analysis.presentation import AccidentPresentationService
+from modules.accident_analysis.presentation.contract import (
+    EXPECTED_TOKENS_BY_SLIDE,
+    TRADITIONAL_SLIDE_SIZE,
+    chart_frames,
+    tokens_by_slide,
+    validate_traditional_template,
+)
+from modules.accident_analysis.presentation.common import WIDE
 from tests.test_accident_analysis import dataset
 from web_server import content_disposition, parse_uploads, recover_major_violations
 from tests.test_excel_sources import make_workbook
@@ -74,6 +84,26 @@ class RuntimeTests(unittest.TestCase):
 
 
 class PresentationServiceTests(unittest.TestCase):
+    def test_traditional_template_matches_versioned_token_contract(self):
+        template = AccidentPresentationService().variants["traditional"].template
+        presentation = Presentation(template)
+        validate_traditional_template(presentation)
+        actual = tokens_by_slide(presentation)
+        self.assertEqual(actual, EXPECTED_TOKENS_BY_SLIDE)
+        self.assertEqual(len(set().union(*(counter.keys() for counter in actual))), 194)
+        self.assertEqual(sum(sum(counter.values()) for counter in actual), 230)
+
+    def test_traditional_template_validation_rejects_a_missing_token(self):
+        template = AccidentPresentationService().variants["traditional"].template
+        presentation = Presentation(template)
+        period_shape = next(
+            shape for shape in presentation.slides[0].shapes
+            if getattr(shape, "has_text_frame", False) and "{{PERIOD}}" in shape.text
+        )
+        period_shape.text = period_shape.text.replace("{{PERIOD}}", "")
+        with self.assertRaisesRegex(ValueError, "第 1 頁 TOKEN 不符"):
+            validate_traditional_template(presentation)
+
     def test_unknown_variant_is_rejected_before_subprocess(self):
         with tempfile.TemporaryDirectory() as tempdir:
             service = AccidentPresentationService(Path(tempdir))
@@ -87,7 +117,38 @@ class PresentationServiceTests(unittest.TestCase):
             self.assertTrue(generated.content.startswith(b"PK"))
             self.assertEqual(generated.filename, filename)
             presentation = Presentation(BytesIO(generated.content))
-            self.assertGreaterEqual(len(presentation.slides), 7)
+            self.assertEqual(len(presentation.slides), 7)
+            expected_size = WIDE if variant == "modern" else TRADITIONAL_SLIDE_SIZE
+            self.assertEqual((presentation.slide_width, presentation.slide_height), expected_size)
+            picture_counts = [
+                sum(shape.shape_type == MSO_SHAPE_TYPE.PICTURE for shape in slide.shapes)
+                for slide in presentation.slides
+            ]
+            table_counts = [
+                sum(shape.has_table for shape in slide.shapes)
+                for slide in presentation.slides
+            ]
+            if variant == "modern":
+                self.assertEqual(picture_counts, [0, 1, 1, 2, 2, 0, 0])
+                self.assertEqual(table_counts, [0, 0, 0, 0, 0, 1, 0])
+                layout_tolerance = Inches(0.1)
+                for slide in presentation.slides:
+                    for shape in slide.shapes:
+                        self.assertGreaterEqual(shape.left, -layout_tolerance)
+                        self.assertGreaterEqual(shape.top, -layout_tolerance)
+                        self.assertLessEqual(shape.left + shape.width, presentation.slide_width + layout_tolerance)
+                        self.assertLessEqual(shape.top + shape.height, presentation.slide_height + layout_tolerance)
+            else:
+                self.assertEqual(picture_counts, [1, 1, 1, 2, 2, 0, 0])
+                self.assertEqual(table_counts, [0, 1, 1, 2, 2, 1, 5])
+                template = Presentation(service.variants["traditional"].template)
+                expected_frames = {frame[1:] for frame in chart_frames(template).values()}
+                actual_pictures = {
+                    (shape.left, shape.top, shape.width, shape.height)
+                    for slide in presentation.slides for shape in slide.shapes
+                    if shape.shape_type == MSO_SHAPE_TYPE.PICTURE
+                }
+                self.assertTrue(expected_frames.issubset(actual_pictures))
             with ZipFile(BytesIO(generated.content)) as archive:
                 slide_xml = b"".join(
                     archive.read(name) for name in archive.namelist()
