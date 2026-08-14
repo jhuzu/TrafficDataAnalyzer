@@ -54,6 +54,13 @@ def load_performance_targets(path: str | Path, period: str = "month") -> Perform
     """Read the established performance-control workbook's monthly target rows."""
     path = Path(path)
     workbook = load_workbook(path, data_only=True, read_only=True)
+    try:
+        return _read_performance_targets(path, workbook, period)
+    finally:
+        workbook.close()
+
+
+def _read_performance_targets(path: Path, workbook: Any, period: str) -> PerformanceTargets:
     sheet_name = "13大項月" if period == "month" else "基準值"
     sheet = workbook[sheet_name] if sheet_name in workbook.sheetnames else None
     if sheet is None:
@@ -102,6 +109,32 @@ def load_performance_targets(path: str | Path, period: str = "month") -> Perform
     return PerformanceTargets(path.name, tuple(values), values, matched_headers, tuple(f"目標檔未對應：{label}" for label in unmatched))
 
 
+def _accumulate_performance_statistics(
+    workbook: Any,
+    values: dict[str, dict[str, float]],
+    available: set[str],
+) -> None:
+    sheet = workbook["13大項月"] if "13大項月" in workbook.sheetnames else workbook.active
+    header_row = 4 if sheet.title == "13大項月" else 3
+    headers = {column: str(sheet.cell(header_row, column).value or "").replace("\n", "") for column in range(3, sheet.max_column + 1)}
+    matches = {key: next((column for column, text in headers.items() if any(word in text for word in matchers)), None) for key, _label, matchers, _predicate, _requirement in PERFORMANCE_CATEGORIES}
+    current_unit = ""
+    statistic_markers = {"取締件數", "合計"}
+    for row in range(header_row + 1, sheet.max_row + 1):
+        unit_cell = str(sheet.cell(row, 1).value or "").strip()
+        if unit_cell:
+            current_unit = unit_cell.replace("板橋分局", "")
+        if str(sheet.cell(row, 2).value or "").strip() not in statistic_markers:
+            continue
+        unit = current_unit
+        if not unit or unit == "合計": continue
+        for key, column in matches.items():
+            if column is None: continue
+            value = _number(sheet.cell(row, column).value)
+            if value is not None:
+                values[unit][key] += value; available.add(key)
+
+
 def load_performance_statistics(paths: list[str | Path]) -> PerformanceStatistics:
     """Read one or more performance-control workbooks' 取締件數 rows."""
     values: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
@@ -112,25 +145,10 @@ def load_performance_statistics(paths: list[str | Path]) -> PerformanceStatistic
         # Some official statistical tables have a stale worksheet dimension (A1:U3)
         # despite populated merged rows below; normal mode reads their real extent.
         workbook = load_workbook(path, data_only=True, read_only=False)
-        sheet = workbook["13大項月"] if "13大項月" in workbook.sheetnames else workbook.active
-        header_row = 4 if sheet.title == "13大項月" else 3
-        headers = {column: str(sheet.cell(header_row, column).value or "").replace("\n", "") for column in range(3, sheet.max_column + 1)}
-        matches = {key: next((column for column, text in headers.items() if any(word in text for word in matchers)), None) for key, _label, matchers, _predicate, _requirement in PERFORMANCE_CATEGORIES}
-        current_unit = ""
-        statistic_markers = {"取締件數", "合計"}
-        for row in range(header_row + 1, sheet.max_row + 1):
-            unit_cell = str(sheet.cell(row, 1).value or "").strip()
-            if unit_cell:
-                current_unit = unit_cell.replace("板橋分局", "")
-            if str(sheet.cell(row, 2).value or "").strip() not in statistic_markers:
-                continue
-            unit = current_unit
-            if not unit or unit == "合計": continue
-            for key, column in matches.items():
-                if column is None: continue
-                value = _number(sheet.cell(row, column).value)
-                if value is not None:
-                    values[unit][key] += value; available.add(key)
+        try:
+            _accumulate_performance_statistics(workbook, values, available)
+        finally:
+            workbook.close()
     if not values:
         raise ValueError("統計值檔找不到可用的「取締件數」或「合計」列。請提供績效管制或重大違規項目統計表。")
     return PerformanceStatistics(tuple(names), {unit: dict(item) for unit, item in values.items()}, tuple(sorted(available)), tuple(warnings))

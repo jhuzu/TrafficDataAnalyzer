@@ -23,8 +23,9 @@ PATTERN_LABELS = {
 BANQIAO_MAP_BOUNDS = (24.97, 25.04, 121.42, 121.49)
 
 
-def _clean_number(value: float) -> int | float:
-    return int(value) if value.is_integer() else round(value, 2)
+def _clean_number(value: int | float) -> int | float:
+    numeric = float(value)
+    return int(numeric) if numeric.is_integer() else round(numeric, 2)
 
 
 def _age_label(value: Any) -> str:
@@ -449,6 +450,10 @@ class AccidentAnalysisService:
             "center": center,
             "total": coordinate_count,
             "coordField": f"{lng_field}/{lat_field}",
+            "positioningVersion": "1.1",
+            "offlineReferenceLoaded": bool(self.road_reference.by_road),
+            "offlineRoads": len(self.road_reference.by_road),
+            "offlineIntersections": len(self.road_reference.by_pair),
             "repaired": repaired_count,
             "referenced": referenced_count,
             "unlocated": unlocated_count,

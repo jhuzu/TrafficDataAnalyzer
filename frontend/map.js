@@ -79,7 +79,10 @@ export function createAccidentMap({ container, info, unlocated, getToken, getOpt
       const suspiciousInfo = data.suspicious
         ? `；偵測 ${Number(data.suspicious).toLocaleString()} 筆路名不一致座標`
         : "";
-      info.textContent = `${Number(data.total).toLocaleString()} 筆座標（${data.coordField}）${referenceInfo}${suspiciousInfo}${repairInfo}${unlocatedInfo}`;
+      const databaseInfo = data.offlineReferenceLoaded
+        ? `離線定位 v${data.positioningVersion}（${Number(data.offlineRoads).toLocaleString()} 條道路／${Number(data.offlineIntersections).toLocaleString()} 組路口）；`
+        : "離線道路資料庫未載入；";
+      info.textContent = `${databaseInfo}${Number(data.total).toLocaleString()} 筆座標（${data.coordField}）${referenceInfo}${suspiciousInfo}${repairInfo}${unlocatedInfo}`;
       if (unlocated) {
         const records = data.unlocatedRecords || [];
         unlocated.classList.toggle("hidden", !records.length);

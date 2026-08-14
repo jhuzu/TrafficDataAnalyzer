@@ -131,6 +131,10 @@ class AccidentAnalysisServiceTests(unittest.TestCase):
 
     def test_map_marker_aggregation(self):
         result = self.service.map_points({"pattern": "all"})
+        self.assertEqual(result["positioningVersion"], "1.1")
+        self.assertTrue(result["offlineReferenceLoaded"])
+        self.assertGreater(result["offlineRoads"], 2000)
+        self.assertGreater(result["offlineIntersections"], 7000)
         self.assertEqual(result["total"], 3)
         self.assertEqual(result["coordField"], "經度/緯度")
         self.assertEqual(result["markers"][0]["label"], "文化路／民生路")

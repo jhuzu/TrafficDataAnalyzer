@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 setlocal
 set "PROJECT_ROOT=%~dp0..\.."
 cd /d "%PROJECT_ROOT%"
@@ -17,9 +18,9 @@ if not exist ".venv\Scripts\python.exe" (
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-NetTCPConnection -LocalPort 8765 -State Listen -ErrorAction SilentlyContinue) { exit 1 }"
 if errorlevel 1 (
-  echo [錯誤] 8765 連接埠已被其他程式使用。請先關閉另一個工具視窗後再試。
-  pause
-  exit /b 1
+  echo [資訊] 工具已經在執行，現在開啟瀏覽器。
+  start "" http://127.0.0.1:8765
+  exit /b 0
 )
 
 start "" http://127.0.0.1:8765

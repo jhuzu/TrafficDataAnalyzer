@@ -449,6 +449,22 @@ canvas {
   font-size: 13px;
 }
 
+.version-badge {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.map-version-note {
+  margin-top: -0.25rem;
+}
+
 .map-controls label {
   display: flex;
   align-items: center;
